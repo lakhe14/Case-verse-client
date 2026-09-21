@@ -5,10 +5,12 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Money, QuantityStepper } from './ui';
 import SalePrice from './SalePrice';
+import SaleBanner from './SaleBanner';
 import { whatsapp, contact } from '../config';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { PageTransition } from '../motion/MotionPrimitives';
 import { motionTokens } from '../motion/motionConfig';
+import { useNavScroll } from '../hooks/useNavScroll';
 
 const BLANK_IMG =
   'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
@@ -61,24 +63,41 @@ function CartPill({ count }) {
   return <span className={`cart-pill ${bumped ? 'is-bumped' : ''}`}>{count}</span>;
 }
 
-function Navbar({ onCartOpen, cartButtonRef }) {
+function Navbar({ onCartOpen, cartButtonRef, scrolled, recede }) {
   const { isCustomer, user, logout } = useAuth();
   const { itemCount } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
   const reduce = useReducedMotion();
-
-  useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 12);
-    update(); window.addEventListener('scroll', update, { passive: true });
-    return () => window.removeEventListener('scroll', update);
-  }, []);
+  const drawerRef = useRef(null);
+  const toggleRef = useRef(null);
+  const menuId = 'nav-mobile-menu';
 
   // Close the mobile menu on navigation.
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  // One listener pair for both dismiss gestures; only attached while open.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    const onPointerDown = (e) => {
+      if (drawerRef.current?.contains(e.target) || toggleRef.current?.contains(e.target)) return;
+      setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [menuOpen]);
 
   const close = () => setMenuOpen(false);
   const openCart = () => {
@@ -87,11 +106,16 @@ function Navbar({ onCartOpen, cartButtonRef }) {
   };
 
   return (
-    <header className={`nav ${scrolled ? 'is-scrolled' : ''}`}>
-      <div className="container nav-inner">
-        <motion.div initial={reduce ? false : { opacity: 0, y: -6, letterSpacing: '.03em' }} animate={{ opacity: 1, y: 0, letterSpacing: '-.06em' }} transition={{ duration: .38 }}><Link to="/" className="brand">CaseVerse</Link></motion.div>
+    <motion.header
+      className={`nav ${scrolled ? 'is-scrolled' : ''}`}
+      initial={false}
+      animate={reduce ? undefined : { y: recede && !menuOpen ? -10 : 0 }}
+      transition={{ duration: motionTokens.duration.normal, ease: motionTokens.ease.standard }}
+    >
+      <div className="nav-inner">
+        <Link to="/" className="brand">CaseVerse</Link>
 
-        <nav className="nav-primary">
+        <nav className="nav-primary" aria-label="Primary">
           {PRIMARY_LINKS.map(([to, label]) => (
             <NavLink key={to} to={to} className="navlink">{({ isActive }) => <>{label}{isActive && <motion.i className="nav-active-indicator" layoutId="nav-active-indicator" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}</>}</NavLink>
           ))}
@@ -116,10 +140,12 @@ function Navbar({ onCartOpen, cartButtonRef }) {
         </div>
 
         <button
+          ref={toggleRef}
           type="button"
           className="nav-toggle"
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
+          aria-controls={menuId}
           onClick={() => setMenuOpen((o) => !o)}
         >
           <span className={`nav-toggle-bars ${menuOpen ? 'is-open' : ''}`} aria-hidden="true">
@@ -132,25 +158,29 @@ function Navbar({ onCartOpen, cartButtonRef }) {
 
       <AnimatePresence>
       {menuOpen && (
-        <motion.div className="nav-drawer" initial={reduce ? false : { opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: motionTokens.duration.fast, ease: motionTokens.ease.standard }}>
-          <div className="container">
+        <motion.div
+          id={menuId}
+          ref={drawerRef}
+          role="menu"
+          className="nav-drawer"
+          initial={reduce ? false : { opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: motionTokens.duration.normal, ease: motionTokens.ease.standard }}
+        >
+          <div className="nav-drawer-inner">
             {PRIMARY_LINKS.map(([to, label]) => (
               <NavLink key={to} to={to} className="nav-drawer-link" onClick={close}>{label}</NavLink>
             ))}
             <div className="nav-drawer-rule" />
             <NavLink to="/wishlist" className="nav-drawer-link" onClick={close}>Wishlist</NavLink>
-            <button type="button" className="nav-drawer-link" style={{ background: 'none', border: 0, textAlign: 'left', cursor: 'pointer', width: '100%' }} onClick={openCart}>
+            <button type="button" className="nav-drawer-link nav-drawer-btn" onClick={openCart}>
               Cart{itemCount > 0 ? ` (${itemCount})` : ''}
             </button>
             {isCustomer ? (
               <>
                 <NavLink to="/account" className="nav-drawer-link" onClick={close}>Your account</NavLink>
-                <button
-                  type="button"
-                  className="nav-drawer-link"
-                  style={{ background: 'none', border: 0, textAlign: 'left', cursor: 'pointer', width: '100%' }}
-                  onClick={() => { close(); logout(); }}
-                >
+                <button type="button" className="nav-drawer-link nav-drawer-btn" onClick={() => { close(); logout(); }}>
                   Log out
                 </button>
               </>
@@ -172,7 +202,7 @@ function Navbar({ onCartOpen, cartButtonRef }) {
         </motion.div>
       )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   );
 }
 
@@ -362,7 +392,9 @@ function Footer() {
 export default function Layout() {
   const [cartOpen, setCartOpen] = useState(false);
   const cartButtonRef = useRef(null);
+  const navStackRef = useRef(null);
   const location = useLocation();
+  const { scrolled, recede } = useNavScroll();
 
   const openCart = useCallback(() => setCartOpen(true), []);
   const closeCart = useCallback(() => setCartOpen(false), []);
@@ -372,9 +404,24 @@ export default function Layout() {
     setCartOpen(false);
   }, [location.pathname]);
 
+  // Non-home pages need real top padding now that the nav floats out of
+  // flow; measure the banner+navbar stack instead of guessing a constant.
+  useEffect(() => {
+    const el = navStackRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const set = () => document.documentElement.style.setProperty('--nav-clearance', `${el.offsetHeight}px`);
+    set();
+    const observer = new ResizeObserver(set);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="storefront">
-      <Navbar onCartOpen={openCart} cartButtonRef={cartButtonRef} />
+      <div className="nav-stack" ref={navStackRef}>
+        <SaleBanner recede={recede} />
+        <Navbar onCartOpen={openCart} cartButtonRef={cartButtonRef} scrolled={scrolled} recede={recede} />
+      </div>
       <main className={location.pathname === '/' ? 'page page--home' : 'content-shell page'}>
         <PageTransition calm={location.pathname === '/checkout'} key={location.pathname}>
           <Outlet />
