@@ -156,7 +156,7 @@ export default function AdminLayout() {
           <div><span className="admin-crumb">CASEVERSE / OPERATIONS</span></div>
           <div className="admin-user-chip"><span>{staff?.name?.slice(0, 1) || 'A'}</span><div><b>{staff?.name}</b><small>{staff?.role}</small></div></div>
         </header>
-        <Outlet />
+        <div className="admin-content"><Outlet /></div>
       </main>
     </div>
   );

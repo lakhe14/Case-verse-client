@@ -6,6 +6,7 @@ import { Spinner, Money, EmptyState, QuantityStepper } from '../components/ui';
 import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence, motion } from 'motion/react';
 import { MotionButton } from '../motion/MotionPrimitives';
+import SalePrice from '../components/SalePrice';
 
 const BLANK_IMG =
   'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
@@ -82,6 +83,7 @@ export default function Cart() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
+                <SalePrice price={item.unit_price} compareAt={item.compare_at_price} compact />
                 <div className="money-serif" style={{ fontSize: '1.05rem' }}>
                   <Money value={item.line_total} />
                 </div>

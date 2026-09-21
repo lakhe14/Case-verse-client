@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import { Money } from './ui';
 import { wishlist as wishlistApi } from '../api/endpoints';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { motion, useReducedMotion } from 'motion/react';
 import { reveal, motionTokens } from '../motion/motionConfig';
+import SalePrice from './SalePrice';
 
 function HeartIcon({ filled }) {
   return (
@@ -67,11 +67,7 @@ export default function ProductCard({ product, onWishlistChange }) {
           <div className="pc-name">{product.name}</div>
           <div className="pc-cat">{product.category?.name}</div>
           <div className="pc-price">
-            {product.price_from === product.price_to ? (
-              <Money value={product.price_from} />
-            ) : (
-              <>From <Money value={product.price_from} /></>
-            )}
+            <SalePrice price={product.price_from} compareAt={product.compare_at_price_from} compact />
           </div>
           {!product.in_stock && <div className="pc-oos">Out of stock</div>}
         </div>

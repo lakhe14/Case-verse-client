@@ -10,6 +10,7 @@ import { Spinner, ErrorText, Money, Stars, QuantityStepper } from '../components
 import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence, motion } from 'motion/react';
 import { MotionButton, StaggerGroup } from '../motion/MotionPrimitives';
+import SalePrice from '../components/SalePrice';
 
 /** Trim a product description into a ~155-char meta description. */
 function metaFromProduct(product) {
@@ -368,7 +369,7 @@ export default function ProductDetail() {
             <div className="pdp-cat">{product.category?.name}</div>
             <h1 style={{ margin: '6px 0 14px' }}>{product.name}</h1>
             <div className="pdp-price">
-              <Money value={active?.price ?? product.base_price} />
+              <SalePrice price={active?.price ?? product.base_price} compareAt={active?.compare_at_price} />
             </div>
           </div>
 

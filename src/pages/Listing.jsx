@@ -7,6 +7,7 @@ import { Spinner, ErrorText, EmptyState, Pagination } from '../components/ui';
 import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence } from 'motion/react';
 import { Reveal, StaggerGroup } from '../motion/MotionPrimitives';
+import LimitedSale from '../components/LimitedSale';
 
 const SORTS = [['newest', 'Newest'], ['name_asc', 'Name A to Z'], ['name_desc', 'Name Z to A']];
 const COPY = {
@@ -60,6 +61,7 @@ export default function Listing({ categorySlug }) {
           {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
       </div></div>
+      <LimitedSale />
       {error ? <div className="catalog-error"><ErrorText error={error} /><button type="button" className="btn subtle" onClick={() => reload().catch(() => {})}>Try again</button></div> : loading ? <div className="catalog-skeleton" aria-label="Loading products">{Array.from({ length: 8 }, (_, i) => <div className="skel" key={i} />)}</div> : !data?.data?.length ? (
         <EmptyState title={query.q ? `No results for "${query.q}"` : 'Nothing here yet'}>
           <p className="muted" style={{ maxWidth: '38ch', margin: '0 auto 14px' }}>{query.q ? 'Nothing matched that search. Try a different word, or browse the full range.' : 'This section is being stocked. Check back soon.'}</p>

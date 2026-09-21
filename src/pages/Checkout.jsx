@@ -4,6 +4,7 @@ import { addresses as addressApi, orders as orderApi, loyalty as loyaltyApi } fr
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner, ErrorText, Money, EmptyState } from '../components/ui';
+import SalePrice from '../components/SalePrice';
 import usePageMeta from '../hooks/usePageMeta';
 
 export default function Checkout() {
@@ -227,6 +228,7 @@ export default function Checkout() {
             <Spinner />
           ) : (
             <div>
+              <div className="checkout-price-lines">{(totals.lines || []).map((line) => <div className="spread small" key={line.variant_id}><span>{line.name} × {line.quantity}</span><SalePrice price={line.unit_price} compareAt={line.compare_at_price} compact /></div>)}</div>
               <div className="summary-row"><span className="muted">Subtotal</span><Money value={totals.subtotal} /></div>
               {totals.bundle_discount > 0 && (
                 <div className="summary-row">

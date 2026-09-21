@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import { admin } from '../../api/endpoints';
 import { Spinner, ErrorText, Money, StatusBadge } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
 
 const NEXT = {
   pending: ['processing', 'shipped', 'cancelled'],
@@ -15,9 +16,12 @@ const NEXT = {
 export default function AdminOrderDetail() {
   const { id } = useParams();
   const { data, loading, error, reload } = useAsync(() => admin.order(id), [id]);
+  const { can } = useAuth();
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [paymentNote, setPaymentNote] = useState('');
+  const [proofUrl, setProofUrl] = useState(null);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorText error={error} />;
@@ -37,6 +41,22 @@ export default function AdminOrderDetail() {
       setBusy(false);
     }
   };
+  const payment = o?.paymentConfirmation;
+  const paymentConfirmed = payment && ((payment.method === 'advance_qr' && payment.status === 'approved') || (payment.method === 'whatsapp_cod' && payment.status === 'cod_confirmed'));
+  const paymentBlocked = payment && !paymentConfirmed;
+  const reviewPayment = async (action) => {
+    setBusy(true); setActionError(null);
+    try {
+      if (action === 'approve') await admin.approvePayment(payment.id, paymentNote || undefined);
+      else await admin.rejectPayment(payment.id, paymentNote || undefined);
+      setPaymentNote(''); reload();
+    } catch (e) { setActionError(e); } finally { setBusy(false); }
+  };
+  const viewProof = async () => {
+    setActionError(null);
+    try { const result = await admin.paymentProof(payment.id); setProofUrl(URL.createObjectURL(result.data)); }
+    catch (e) { setActionError(e); }
+  };
 
   return (
     <div className="col">
@@ -53,6 +73,7 @@ export default function AdminOrderDetail() {
       <div className="card">
         <h3>Update status</h3>
         <ErrorText error={actionError} />
+        {paymentBlocked && <p className="alert error">{payment.status === 'rejected' ? 'Payment proof rejected. Waiting for the customer to upload a new proof.' : payment.status === 'proof_uploaded' ? 'Payment proof submitted. Review the screenshot before processing this order.' : 'Payment confirmation required. This order cannot be processed until its payment is approved.'}</p>}
         {NEXT[o.status].length === 0 ? (
           <p className="muted">This order is in a final state.</p>
         ) : (
@@ -60,7 +81,7 @@ export default function AdminOrderDetail() {
             <input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="row" style={{ marginTop: 8 }}>
               {NEXT[o.status].map((s) => (
-                <button key={s} className="btn sm" disabled={busy} onClick={() => changeStatus(s)}>
+                <button key={s} className="btn sm" disabled={busy || (paymentBlocked && ['processing', 'shipped', 'delivered'].includes(s))} onClick={() => changeStatus(s)}>
                   Mark {s}
                 </button>
               ))}
@@ -68,6 +89,8 @@ export default function AdminOrderDetail() {
           </>
         )}
       </div>
+
+      {payment && <div className="card admin-payment-panel"><div className="spread"><h3>Payment confirmation</h3><StatusBadge status={payment.status} /></div><dl><div><dt>Method</dt><dd>{payment.method === 'whatsapp_cod' ? 'WhatsApp COD' : 'eSewa advance'}</dd></div><div><dt>Advance</dt><dd><Money value={payment.advance_amount} /></dd></div><div><dt>Submitted</dt><dd>{payment.proof_filename ? new Date(payment.updated_at).toLocaleString() : 'Not submitted'}</dd></div>{payment.reviewed_at && <div><dt>Reviewed</dt><dd>{new Date(payment.reviewed_at).toLocaleString()}{payment.reviewedByStaff?.name ? ` by ${payment.reviewedByStaff.name}` : ''}</dd></div>}</dl>{payment.admin_note && <p className="muted small">Note: {payment.admin_note}</p>}{can('manage_order_payments') && <div className="admin-payment-actions">{payment.proof_filename && <button className="btn subtle sm" onClick={viewProof}>View payment proof</button>}{payment.status === 'proof_uploaded' && <><textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength="500" rows="3" placeholder="Optional review or rejection note" /><div className="row"><button className="btn sm" disabled={busy} onClick={() => reviewPayment('approve')}>Approve payment</button><button className="btn danger sm" disabled={busy} onClick={() => reviewPayment('reject')}>Reject payment</button></div></>}{payment.status === 'cod_pending' && <button className="btn sm" disabled={busy} onClick={() => reviewPayment('approve')}>Confirm COD</button>}</div>}</div>}
 
       <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div className="card" style={{ flex: '1 1 320px' }}>
@@ -106,6 +129,7 @@ export default function AdminOrderDetail() {
           ))}
         </ul>
       </div>
+      {proofUrl && <div className="admin-proof-modal" role="dialog" aria-modal="true" aria-label="Payment proof preview" onClick={() => { URL.revokeObjectURL(proofUrl); setProofUrl(null); }}><img src={proofUrl} alt="Customer payment proof" /></div>}
     </div>
   );
 }
