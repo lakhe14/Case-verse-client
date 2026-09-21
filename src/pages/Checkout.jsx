@@ -128,8 +128,8 @@ export default function Checkout() {
     <div>
       <div className="checkout-backlinks"><Link to="/cart">← Back to cart</Link><Link to="/covers">Continue shopping</Link></div>
       <h1>Checkout</h1>
-      <div className="row" style={{ alignItems: 'flex-start', gap: '32px 40px', flexWrap: 'wrap' }}>
-        <div className="col" style={{ flex: '1 1 320px', minWidth: 0 }}>
+      <div className="row checkout-layout" style={{ alignItems: 'flex-start', gap: '32px 40px', flexWrap: 'wrap' }}>
+        <div className="col checkout-form" style={{ flex: '1 1 320px', minWidth: 0 }}>
           <div className="card">
             <h3>Shipping address</h3>
             <div className="stack">
@@ -223,7 +223,7 @@ export default function Checkout() {
           )}
         </div>
 
-        <div className="summary-box" style={{ flex: '1 1 300px' }}>
+        <div className="summary-box checkout-summary" style={{ flex: '1 1 300px' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 500, marginTop: 0 }}>Order total</h3>
           {!totals ? (
             <Spinner />

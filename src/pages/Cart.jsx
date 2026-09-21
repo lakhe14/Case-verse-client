@@ -59,8 +59,8 @@ export default function Cart() {
   return (
     <div>
       <h1>Cart</h1>
-      <div className="row" style={{ alignItems: 'flex-start', gap: '32px 40px', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+      <div className="row cart-layout" style={{ alignItems: 'flex-start', gap: '32px 40px', flexWrap: 'wrap' }}>
+        <div className="cart-items" style={{ flex: '1 1 320px', minWidth: 0 }}>
           <AnimatePresence initial={false}>
           {cart.items.map((item) => (
             <motion.div key={item.id} className="cart-line" layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }} transition={{ duration: 0.2 }}>
@@ -94,7 +94,7 @@ export default function Cart() {
           </AnimatePresence>
         </div>
 
-        <div className="summary-box" style={{ flex: '1 1 300px' }}>
+        <div className="summary-box cart-summary" style={{ flex: '1 1 300px' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 500, marginTop: 0 }}>Summary</h3>
           <div className="summary-row">
             <span className="muted">Subtotal</span>

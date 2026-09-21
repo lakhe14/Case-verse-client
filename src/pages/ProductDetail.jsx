@@ -331,8 +331,8 @@ export default function ProductDetail() {
         Back to {product.category?.name || 'shop'}
       </Link>
 
-      <StaggerGroup className="row" style={{ marginTop: 16, alignItems: 'flex-start', gap: '28px 48px', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 300px', maxWidth: 520, minWidth: 0 }}>
+      <StaggerGroup className="row pdp-layout" style={{ marginTop: 16, alignItems: 'flex-start', gap: '28px 48px', flexWrap: 'wrap' }}>
+        <div className="pdp-gallery" style={{ flex: '1 1 300px', maxWidth: 520, minWidth: 0 }}>
           <div className="pdp-media">
             <AnimatePresence mode="wait">
             {hero?.url ? (
@@ -364,7 +364,7 @@ export default function ProductDetail() {
           )}
         </div>
 
-        <div style={{ flex: '1 1 300px', minWidth: 0 }} className="stack">
+        <div style={{ flex: '1 1 300px', minWidth: 0 }} className="stack pdp-info">
           <div>
             <div className="pdp-cat">{product.category?.name}</div>
             <h1 style={{ margin: '6px 0 14px' }}>{product.name}</h1>

@@ -72,8 +72,8 @@ export default function OrderDetail() {
 
       {o.status === 'cancelled' && <div className="alert ok">This order was cancelled. <Link to="/covers">Shop other covers</Link> or <Link to="/account/orders">view your orders</Link>.</div>}
 
-      <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div className="card" style={{ flex: '1 1 340px' }}>
+      <div className="row order-detail-grid" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div className="card order-detail-items" style={{ flex: '1 1 340px' }}>
           <h4>Items</h4>
           {o.items.map((it) => (
             <div key={it.id} style={{ borderTop: '1px solid var(--brass-line-soft)', paddingTop: 8, marginTop: 8 }}>
@@ -97,7 +97,7 @@ export default function OrderDetail() {
           ))}
         </div>
 
-        <div className="card" style={{ flex: '0 0 260px' }}>
+        <div className="card order-detail-totals" style={{ flex: '0 0 260px' }}>
           <h4>Totals</h4>
           <div className="spread"><span className="muted">Subtotal</span><Money value={o.subtotal_amount} /></div>
           {Number(o.bundle_discount_amount) > 0 && (
