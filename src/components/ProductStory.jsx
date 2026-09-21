@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -13,12 +13,18 @@ const steps = [
   ['04', 'Soft-touch grip', 'A confident hold that feels considered from the first touch.'],
 ];
 
-export default function ProductStory({ products = [] }) {
+const featureVisuals = [
+  { src: '/uploads/1788853703560-7f5caf4007c0.jpeg', alt: 'Blue floral CaseVerse cover collection' },
+  { src: '/uploads/1788809024587-2e813bf04a20.jpeg', alt: 'CaseVerse cover with raised camera surround' },
+  { src: '/uploads/1788853813494-212711858c4a.jpeg', alt: 'Blue bird CaseVerse covers' },
+  { src: '/uploads/1788859384625-f2767d2871f3.jpeg', alt: 'Red textured CaseVerse covers' },
+];
+
+export default function ProductStory() {
   const root = useRef(null);
   const [active, setActive] = useState(0);
   const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches);
   const reduce = useReducedMotion();
-  const visuals = useMemo(() => products.filter((p) => p.images?.[0]?.url).slice(0, 4), [products]);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)');
     const sync = () => setMobile(media.matches);
@@ -27,11 +33,19 @@ export default function ProductStory({ products = [] }) {
     return () => media.removeEventListener('change', sync);
   }, []);
   useGSAP(() => {
-    if (reduce || window.matchMedia('(max-width: 700px)').matches || visuals.length < 2) return undefined;
-    gsap.to({}, { scrollTrigger: { trigger: root.current, start: 'top top', end: '+=1200', scrub: .45, pin: true, anticipatePin: 1, onUpdate: (self) => setActive(Math.min(3, Math.floor(self.progress * 4))) } });
-  }, { scope: root, dependencies: [reduce, visuals.length] });
-
-  const visual = visuals[active % Math.max(visuals.length, 1)];
+    if (reduce || mobile || !root.current) return undefined;
+    const trigger = ScrollTrigger.create({
+      trigger: root.current,
+      start: 'top top',
+      end: '+=1280',
+      scrub: 0.35,
+      pin: true,
+      anticipatePin: 1,
+      invalidateOnRefresh: true,
+      onUpdate: (self) => setActive(Math.min(3, Math.floor(self.progress * 4))),
+    });
+    return () => trigger.kill();
+  }, { scope: root, dependencies: [reduce, mobile] });
   useEffect(() => {
     if (!mobile || reduce || !root.current) return undefined;
     const nodes = root.current.querySelectorAll('[data-story-step]');
@@ -42,13 +56,12 @@ export default function ProductStory({ products = [] }) {
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
   }, [mobile, reduce]);
-  const visualSrc = mobile ? '/assets/caseverse/case-rotation.webp' : visual?.images?.[0]?.url;
-  const visualAlt = mobile ? 'Animated CaseVerse phone cover' : visual?.name;
-  return <section ref={root} className={`story-scene story-state-${active}`}>
+  const visual = featureVisuals[active];
+  return <section ref={root} className={`story-scene story-state-${active} story-visual-${active}`}>
     <div className="story-device-wrap">
       <div className="story-orbit" aria-hidden="true" />
       <div className="story-reflection" aria-hidden="true" />
-      <AnimatePresence mode="wait">{visualSrc ? <motion.img key={`${mobile ? 'mobile' : visual?.id}-${active}`} className={`story-device story-device--state-${active}`} src={visualSrc} alt={visualAlt} loading={mobile ? 'eager' : 'lazy'} initial={reduce ? { opacity: 0 } : { opacity: 0, scale: active === 1 ? 1.04 : .94, x: active === 1 ? -20 : 0, y: active === 3 ? 20 : 0, rotate: active === 0 ? -2 : 0, rotateY: active === 2 ? -5 : 0 }} animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0, rotateY: 0, clipPath: 'inset(0)' }} exit={{ opacity: 0, scale: .98, y: -8, clipPath: 'inset(4%)' }} transition={{ duration: reduce ? .15 : .55, ease: [0.22, 1, .36, 1] }} /> : <div className="story-device story-device--placeholder" />}</AnimatePresence>
+      <AnimatePresence mode="wait"><motion.img key={visual.src} className={`story-device story-device--state-${active}`} src={visual.src} alt={visual.alt} loading="lazy" initial={reduce ? { opacity: 0 } : { opacity: 0, scale: active === 1 ? 1.04 : .94, x: active === 1 ? -20 : 0, y: active === 3 ? 20 : 0, rotate: active === 0 ? -2 : 0, rotateY: active === 2 ? -5 : 0 }} animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0, rotateY: 0, clipPath: 'inset(0)' }} exit={{ opacity: 0, scale: .98, y: -8, clipPath: 'inset(4%)' }} transition={{ duration: reduce ? .15 : .55, ease: [0.22, 1, .36, 1] }} /></AnimatePresence>
     </div>
     <div className="story-copy">
       <p className="eyebrow">ENGINEERED FOR EVERYDAY</p>

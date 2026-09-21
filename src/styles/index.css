@@ -959,3 +959,28 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 }
 @media (max-width:380px){.home-art .hero-link{padding:78px 18px 0}.home-art .hero-product-depth{right:-18%;width:82vw;height:60%}.story-device-wrap{top:64px;min-height:218px;height:218px}.story-device{width:60vw;max-height:232px}}
 @media (prefers-reduced-motion:reduce) and (max-width:700px){.story-device-wrap{position:relative;top:auto}.story-step{opacity:1!important;transform:none}.story-state-2 .story-orbit{opacity:.45}}
+
+/* Stage 1 homepage foundation: full-bleed hero and distinct static story states. */
+.home-art,.home-art .hero-single,.home-art .hero-panel{width:100%;margin:0}.home-art .hero-single{padding:0}.home-art .hero-panel{border:0;border-radius:0}.home-art .featured-covers{margin-top:-1px}
+@media (min-width:701px){
+  .story-scene{grid-template-columns:minmax(0,1.02fr) minmax(360px,.98fr);min-height:100svh;padding:clamp(48px,6vw,96px) max(6vw,calc((100vw - 1280px)/2));gap:clamp(40px,7vw,112px)}
+  .story-device-wrap{min-height:0;height:min(68vh,640px);align-self:center}
+  .story-device{width:min(37vw,500px);height:100%;max-height:none;object-fit:cover;object-position:50% 50%;border:1px solid rgba(255,255,255,.12)}
+  .story-device--state-0{object-position:50% 52%}.story-device--state-1{object-position:50% 22%}.story-device--state-2{object-position:50% 46%}.story-device--state-3{object-position:50% 55%}
+  .story-copy{max-width:520px}.story-step{opacity:.42}.story-step.is-active{opacity:1}
+}
+@media (max-width:700px){
+  .home-art .hero-panel{min-height:clamp(560px,80svh,690px)}
+  .home-art .hero-link{padding:82px 20px 0}
+  .home-art .hero-link::before{z-index:2;background:linear-gradient(105deg,rgba(7,9,13,.98) 0%,rgba(7,9,13,.88) 48%,rgba(7,9,13,.3) 78%,rgba(7,9,13,.12) 100%),linear-gradient(180deg,rgba(7,9,13,.42) 0%,transparent 35%,rgba(7,9,13,.52) 100%)}
+  .home-art .hp-inner{z-index:3}.home-art .hero-product-depth{z-index:1;inset:auto -28% -9% auto;width:84vw;height:66%;opacity:.62;background:transparent;border-radius:0;overflow:visible;filter:drop-shadow(0 18px 28px rgba(0,0,0,.32))}
+  .home-art .hero-product-depth::before{background:radial-gradient(circle at 48% 48%,rgba(77,188,255,.28),transparent 67%)}
+  .home-art .hero-product-depth::after{background:linear-gradient(90deg,#080b10 0%,transparent 22%,transparent 72%,#081525 100%),linear-gradient(180deg,#080b10 0%,rgba(8,11,16,.2) 24%,transparent 48%,#07101d 100%)}
+  .home-art .hero-product-depth picture{inset:-4% -10%;-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 18%,#000 80%,transparent 100%),linear-gradient(180deg,transparent 0%,#000 10%,#000 88%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0%,#000 18%,#000 80%,transparent 100%),linear-gradient(180deg,transparent 0%,#000 10%,#000 88%,transparent 100%)}
+
+  .story-scene{padding:52px 18px 56px}.story-device-wrap{position:sticky;top:64px;height:228px;min-height:228px;margin:0 0 20px}.story-device{width:min(66vw,282px);height:228px;max-height:none;object-fit:cover;border:1px solid rgba(255,255,255,.12)}
+  .story-device--state-0{object-position:50% 50%}.story-device--state-1{width:min(68vw,292px);object-position:50% 17%}.story-device--state-2{width:min(64vw,274px);object-position:50% 44%}.story-device--state-3{width:min(67vw,286px);object-position:50% 56%}
+  .story-copy h2{margin-bottom:22px}.story-steps{background:linear-gradient(180deg,rgba(7,9,13,.16),rgba(7,9,13,.5))}.story-step{padding-top:17px;padding-bottom:17px}.story-step p{max-width:31ch}.story-step.is-active{background:linear-gradient(90deg,rgba(142,231,243,.12),transparent 82%)}
+  .why-section{padding-top:52px;padding-bottom:52px}.why-section .line-reveal{margin-bottom:0}.feature-columns{margin-top:26px}.feature-columns article{padding-top:18px;padding-bottom:18px}.feature-columns article:first-child{padding-top:16px}
+}
+@media (max-width:380px){.home-art .hero-link{padding:76px 18px 0}.home-art .hero-product-depth{right:-32%;width:88vw;height:64%}.story-device-wrap,.story-device{height:210px;min-height:210px}.story-device{width:68vw}}
