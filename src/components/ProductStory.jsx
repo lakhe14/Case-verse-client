@@ -14,10 +14,10 @@ const steps = [
 ];
 
 const featureVisuals = [
-  { src: '/uploads/1788853703560-7f5caf4007c0.jpeg', alt: 'Blue floral CaseVerse cover collection' },
-  { src: '/uploads/1788809024587-2e813bf04a20.jpeg', alt: 'CaseVerse cover with raised camera surround' },
-  { src: '/uploads/1788853813494-212711858c4a.jpeg', alt: 'Blue bird CaseVerse covers' },
-  { src: '/uploads/1788859384625-f2767d2871f3.jpeg', alt: 'Red textured CaseVerse covers' },
+  { src: '/assets/caseverse/story/precision-fit.jpeg', alt: 'Blue floral CaseVerse cover collection' },
+  { src: '/assets/caseverse/story/camera-protection.jpeg', alt: 'CaseVerse cover with raised camera surround' },
+  { src: '/assets/caseverse/story/magsafe-ready.jpeg', alt: 'Blue bird CaseVerse covers' },
+  { src: '/assets/caseverse/story/soft-touch-grip.jpeg', alt: 'Red textured CaseVerse covers' },
 ];
 
 export default function ProductStory() {
