@@ -7,6 +7,7 @@ const NAV = [
   ['/admin/products', 'Products', 'manage_products'],
   ['/admin/attributes', 'Attributes', 'manage_products'],
   ['/admin/orders', 'Orders', 'manage_orders'],
+  ['/admin/payment-confirmations', 'Payment review', 'manage_order_payments'],
   ['/admin/reviews', 'Reviews', 'manage_reviews'],
   ['/admin/coupons', 'Coupons', 'manage_coupons'],
   ['/admin/customers', 'Customers', 'manage_customers'],

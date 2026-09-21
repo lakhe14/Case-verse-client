@@ -248,13 +248,14 @@ export default function Checkout() {
             </div>
           )}
           <ErrorText error={placeError} />
+          <p className="checkout-payment-note">After placing your order, you will be asked to pay a NPR 100 eSewa advance and upload your payment proof.</p>
           <button
             className="btn block"
             style={{ marginTop: 14 }}
             disabled={placing || !totals || cart.has_stock_issue}
             onClick={placeOrder}
           >
-            {placing ? 'Placing order' : 'Place order'}
+            {placing ? 'Placing order' : 'Place order & continue to payment'}
           </button>
         </div>
       </div>

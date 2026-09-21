@@ -49,6 +49,8 @@ export const orders = {
   place: (body) => post('/orders', body),
   listMine: (params) => get('/orders', params),
   getMine: (id) => get(`/orders/${id}`),
+  uploadPaymentProof: (id, formData) => post(`/orders/${id}/payment-proof`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  requestCod: (id) => post(`/orders/${id}/payment-method/cod`),
 };
 
 export const reviews = {
@@ -100,6 +102,10 @@ export const admin = {
   orders: (params) => get('/admin/orders', params),
   order: (id) => get(`/admin/orders/${id}`),
   updateOrderStatus: (id, body) => put(`/admin/orders/${id}/status`, body),
+  paymentConfirmations: (params) => get('/admin/payment-confirmations', params),
+  approvePayment: (id, note) => post(`/admin/payment-confirmations/${id}/approve`, { note }),
+  rejectPayment: (id, note) => post(`/admin/payment-confirmations/${id}/reject`, { note }),
+  paymentProof: (id) => api.get(`/admin/payment-confirmations/${id}/proof`, { responseType: 'blob' }),
   // reviews
   reviews: (params) => get('/admin/reviews', params),
   moderateReview: (id, status) => put(`/admin/reviews/${id}`, { status }),

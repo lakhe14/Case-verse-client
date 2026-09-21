@@ -31,6 +31,7 @@ import AdminProducts from './pages/admin/Products';
 import ProductForm from './pages/admin/ProductForm';
 import AdminAttributes from './pages/admin/Attributes';
 import AdminOrders from './pages/admin/Orders';
+import AdminPaymentConfirmations from './pages/admin/PaymentConfirmations';
 import AdminOrderDetail from './pages/admin/OrderDetail';
 import AdminReviews from './pages/admin/Reviews';
 import AdminCoupons from './pages/admin/Coupons';
@@ -105,6 +106,7 @@ export default function App() {
         <Route path="attributes" element={<StaffRoute permission="manage_products"><AdminAttributes /></StaffRoute>} />
         <Route path="orders" element={<StaffRoute permission="manage_orders"><AdminOrders /></StaffRoute>} />
         <Route path="orders/:id" element={<StaffRoute permission="manage_orders"><AdminOrderDetail /></StaffRoute>} />
+        <Route path="payment-confirmations" element={<StaffRoute permission="manage_order_payments"><AdminPaymentConfirmations /></StaffRoute>} />
         <Route path="reviews" element={<StaffRoute permission="manage_reviews"><AdminReviews /></StaffRoute>} />
         <Route path="coupons" element={<StaffRoute permission="manage_coupons"><AdminCoupons /></StaffRoute>} />
         <Route path="customers" element={<StaffRoute permission="manage_customers"><AdminCustomers /></StaffRoute>} />

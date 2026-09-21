@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import { orders as api, reviews as reviewsApi } from '../../api/endpoints';
 import { Spinner, ErrorText, Money, StatusBadge, Stars } from '../../components/ui';
+import PaymentConfirmation from '../../components/PaymentConfirmation';
 
 function ReviewForm({ productId, onDone }) {
   const [rating, setRating] = useState(5);
@@ -42,7 +43,7 @@ function ReviewForm({ productId, onDone }) {
 
 export default function OrderDetail() {
   const { id } = useParams();
-  const { data, loading, error } = useAsync(() => api.getMine(id), [id]);
+  const { data, loading, error, reload } = useAsync(() => api.getMine(id), [id]);
   const [reviewing, setReviewing] = useState(null);
   const [reviewed, setReviewed] = useState([]);
 
@@ -61,6 +62,8 @@ export default function OrderDetail() {
         <StatusBadge status={o.status} />
       </div>
       <div className="muted small">Placed {new Date(o.placed_at).toLocaleString()}</div>
+
+      {o.paymentConfirmation && <PaymentConfirmation order={o} onUpdated={reload} />}
 
       <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div className="card" style={{ flex: '1 1 340px' }}>
