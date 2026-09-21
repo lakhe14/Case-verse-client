@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Money, QuantityStepper } from './ui';
+import SalePrice from './SalePrice';
 import { whatsapp, contact } from '../config';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { PageTransition } from '../motion/MotionPrimitives';
@@ -261,7 +262,7 @@ function MiniCartDrawer({ open, onClose, returnFocusRef }) {
                     max={item.available_stock || 99}
                     onChange={(q) => onQty(item.id, q)}
                   />
-                  <span className="minicart-line-price"><Money value={item.line_total} /></span>
+                  <span className="minicart-line-price"><SalePrice price={item.unit_price} compareAt={item.compare_at_price} compact /><small>× {item.quantity}</small></span>
                 </div>
                 <button
                   type="button"
@@ -319,6 +320,7 @@ function Footer() {
           <div>
             <div className="foot-brand">CaseVerse</div>
             <p>iPhone covers, selected for a precise fit and shipped across Nepal.</p>
+            <Link to="/contact">Contact us</Link>
           </div>
 
           <nav className="footer-col" aria-label="Shop">
@@ -326,6 +328,17 @@ function Footer() {
             <Link to="/covers">Phone covers</Link>
             <Link to="/shop">Everything</Link>
             <Link to="/reviews">Reviews</Link>
+          </nav>
+
+          <nav className="footer-col" aria-label="Customer care">
+            <h4>Customer care</h4>
+            <Link to="/faq">FAQ</Link><Link to="/shipping">Shipping & delivery</Link><Link to="/returns">Returns & refunds</Link><Link to="/contact">Contact</Link>
+          </nav>
+          <nav className="footer-col" aria-label="Legal">
+            <h4>Legal</h4><Link to="/terms">Terms & conditions</Link><Link to="/privacy">Privacy policy</Link>
+          </nav>
+          <nav className="footer-col" aria-label="Account">
+            <h4>Account</h4><Link to="/account">My account</Link><Link to="/account/orders">Orders</Link><Link to="/wishlist">Wishlist</Link>
           </nav>
 
           <div className="footer-col">
@@ -340,7 +353,7 @@ function Footer() {
           </div>
         </div>
 
-        <p className="footer-legal">© {new Date().getFullYear()} CaseVerse</p>
+        <p className="footer-legal">© {new Date().getFullYear()} CaseVerse <span><Link to="/terms">Terms</Link><Link to="/privacy">Privacy</Link></span></p>
       </div>
     </footer>
   );
@@ -362,7 +375,7 @@ export default function Layout() {
   return (
     <div className="storefront">
       <Navbar onCartOpen={openCart} cartButtonRef={cartButtonRef} />
-      <main className="container page">
+      <main className={location.pathname === '/' ? 'page page--home' : 'content-shell page'}>
         <PageTransition calm={location.pathname === '/checkout'} key={location.pathname}>
           <Outlet />
         </PageTransition>

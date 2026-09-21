@@ -49,6 +49,7 @@ export const orders = {
   place: (body) => post('/orders', body),
   listMine: (params) => get('/orders', params),
   getMine: (id) => get(`/orders/${id}`),
+  cancelMine: (id) => post(`/orders/${id}/cancel`),
   uploadPaymentProof: (id, formData) => post(`/orders/${id}/payment-proof`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   requestCod: (id) => post(`/orders/${id}/payment-method/cod`),
 };

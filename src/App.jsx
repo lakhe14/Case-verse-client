@@ -10,6 +10,7 @@ import NotFound from './pages/NotFound';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Wishlist from './pages/Wishlist';
+import InfoPage from './pages/InfoPage';
 
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -48,6 +49,12 @@ export default function App() {
         <Route path="shop" element={<Listing />} />
         <Route path="p/:slug" element={<ProductDetail />} />
         <Route path="reviews" element={<Reviews />} />
+        <Route path="faq" element={<InfoPage type="faq" />} />
+        <Route path="shipping" element={<InfoPage type="shipping" />} />
+        <Route path="returns" element={<InfoPage type="returns" />} />
+        <Route path="terms" element={<InfoPage type="terms" />} />
+        <Route path="privacy" element={<InfoPage type="privacy" />} />
+        <Route path="contact" element={<InfoPage type="contact" />} />
         <Route path="cart" element={<Cart />} />
         <Route
           path="checkout"

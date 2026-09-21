@@ -14,6 +14,7 @@ export default function PaymentConfirmation({ order, onUpdated }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   if (!payment) return null;
+  if (order.status === 'cancelled') return <section className="payment-confirmation card"><div className="spread"><div><p className="eyebrow">ORDER CANCELLED</p><h3>Payment confirmation closed</h3></div><StatusBadge status="cancelled" label="Cancelled" /></div><p className="payment-confirmation__message">This order was cancelled before confirmation. Payment proof upload and COD requests are no longer available.</p></section>;
   const completed = ['approved', 'cod_confirmed'].includes(payment.status);
 
   const chooseFile = (event) => {

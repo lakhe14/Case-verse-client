@@ -126,6 +126,7 @@ export default function Checkout() {
 
   return (
     <div>
+      <div className="checkout-backlinks"><Link to="/cart">← Back to cart</Link><Link to="/covers">Continue shopping</Link></div>
       <h1>Checkout</h1>
       <div className="row" style={{ alignItems: 'flex-start', gap: '32px 40px', flexWrap: 'wrap' }}>
         <div className="col" style={{ flex: '1 1 320px', minWidth: 0 }}>

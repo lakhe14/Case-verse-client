@@ -46,6 +46,9 @@ export default function OrderDetail() {
   const { data, loading, error, reload } = useAsync(() => api.getMine(id), [id]);
   const [reviewing, setReviewing] = useState(null);
   const [reviewed, setReviewed] = useState([]);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorText error={error} />;
@@ -53,10 +56,12 @@ export default function OrderDetail() {
   if (!o) return null;
 
   const canReview = o.status === 'delivered';
+  const canCancel = o.status === 'pending' && (!o.paymentConfirmation || ['pending', 'proof_uploaded', 'rejected', 'cod_pending'].includes(o.paymentConfirmation.status));
+  const cancelOrder = async () => { setCancelBusy(true); setCancelError(null); try { await api.cancelMine(o.id); setCancelOpen(false); reload(); } catch (err) { setCancelError(err); } finally { setCancelBusy(false); } };
 
   return (
     <div className="col">
-      <Link to="/account/orders" className="muted small">All orders</Link>
+      <div className="order-detail-actions"><Link to="/account/orders" className="muted small">All orders</Link><Link to="/covers" className="muted small">Continue shopping</Link>{canCancel && <button className="btn danger sm" onClick={() => setCancelOpen(true)}>Cancel order</button>}</div>
       <div className="spread">
         <h2 style={{ margin: 0 }}>{o.order_number}</h2>
         <StatusBadge status={o.status} />
@@ -64,6 +69,8 @@ export default function OrderDetail() {
       <div className="muted small">Placed {new Date(o.placed_at).toLocaleString()}</div>
 
       {o.paymentConfirmation && <PaymentConfirmation order={o} onUpdated={reload} />}
+
+      {o.status === 'cancelled' && <div className="alert ok">This order was cancelled. <Link to="/covers">Shop other covers</Link> or <Link to="/account/orders">view your orders</Link>.</div>}
 
       <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div className="card" style={{ flex: '1 1 340px' }}>
@@ -119,6 +126,7 @@ export default function OrderDetail() {
           ))}
         </ul>
       </div>
+      {cancelOpen && <div className="customer-cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-order-title"><div className="customer-cancel-dialog"><h2 id="cancel-order-title">Cancel this order?</h2><p>Your reserved items will be released and you can return to the shop to choose another design or model.</p>{o.paymentConfirmation?.status === 'proof_uploaded' && <p className="alert error">A payment proof has already been submitted. Cancelling will make it ineligible for review.</p>}<ErrorText error={cancelError} /><div className="row"><button className="btn subtle" onClick={() => setCancelOpen(false)} disabled={cancelBusy}>Keep order</button><button className="btn danger" onClick={cancelOrder} disabled={cancelBusy}>{cancelBusy ? 'Cancelling…' : 'Cancel order'}</button></div></div></div>}
 
       <div className="card">
         <h4>Delivery address</h4>
