@@ -44,7 +44,11 @@ export default function ProductStory() {
       invalidateOnRefresh: true,
       onUpdate: (self) => setActive(Math.min(3, Math.floor(self.progress * 4))),
     });
-    return () => trigger.kill();
+    const refreshFrame = window.requestAnimationFrame(() => ScrollTrigger.refresh());
+    return () => {
+      window.cancelAnimationFrame(refreshFrame);
+      trigger.kill();
+    };
   }, { scope: root, dependencies: [reduce, mobile] });
   useEffect(() => {
     if (!mobile || reduce || !root.current) return undefined;
