@@ -8,8 +8,8 @@ import { campaign as campaignApi } from '../api/endpoints';
 let cached = null;
 let inflight = null;
 
-function load() {
-  if (cached) return Promise.resolve(cached);
+function load(force = false) {
+  if (cached && !force) return Promise.resolve(cached);
   if (!inflight) {
     inflight = campaignApi
       .dashain()
@@ -29,13 +29,20 @@ function load() {
 export function useCampaign() {
   const [data, setData] = useState(cached);
   useEffect(() => {
-    if (cached) return;
     let live = true;
-    load().then((c) => {
-      if (live) setData(c);
+    let boundaryTimer;
+    const refresh = (force = false) => load(force).then((c) => {
+      if (!live) return;
+      setData(c);
+      const start = new Date(c?.starts_at).getTime();
+      const end = new Date(c?.ends_at).getTime();
+      const next = [start, end].find((time) => Number.isFinite(time) && time > Date.now());
+      if (next) boundaryTimer = window.setTimeout(() => refresh(true), Math.max(next - Date.now() + 25, 25));
     });
+    refresh();
     return () => {
       live = false;
+      if (boundaryTimer) window.clearTimeout(boundaryTimer);
     };
   }, []);
   return data;
