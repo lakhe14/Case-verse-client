@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { addresses as addressApi, orders as orderApi, loyalty as loyaltyApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner, ErrorText, Money, EmptyState } from '../components/ui';
 import SalePrice from '../components/SalePrice';
+import GuestCheckoutForm from '../components/GuestCheckoutForm';
 import usePageMeta from '../hooks/usePageMeta';
 
 export default function Checkout() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { isCustomer } = useAuth();
   const { cart, refresh } = useCart();
   usePageMeta('Checkout', 'Complete your CaseVerse order.');
 
@@ -29,6 +32,10 @@ export default function Checkout() {
   const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
+    if (!isCustomer) {
+      setAddrs([]);
+      return;
+    }
     addressApi
       .list()
       .then((r) => {
@@ -44,10 +51,10 @@ export default function Checkout() {
         setLoadError(e);
       });
     loyaltyApi.balance().then((r) => setPointsBalance(r.data.points)).catch(() => {});
-  }, []);
+  }, [isCustomer]);
 
   useEffect(() => {
-    if (!shippingId) return;
+    if (!isCustomer || !shippingId) return;
     setPreviewError(null);
     orderApi
       .preview({
@@ -79,6 +86,15 @@ export default function Checkout() {
         <p className="muted" style={{ margin: '0 auto 14px' }}>Add something to your cart before checking out.</p>
         <Link to="/shop" className="btn sm">Browse the shop</Link>
       </EmptyState>
+    );
+  }
+  if (!isCustomer) {
+    return (
+      <div>
+        <div className="checkout-backlinks"><Link to="/cart">← Back to cart</Link><Link to="/covers">Continue shopping</Link></div>
+        <h1>Checkout</h1>
+        <GuestCheckoutForm />
+      </div>
     );
   }
   if (addrs.length === 0) {

@@ -58,6 +58,16 @@ export const orders = {
   requestCod: (id) => post(`/orders/${id}/payment-method/cod`),
 };
 
+export const guestCheckout = {
+  preview: (body) => post('/guest-checkout/preview', body),
+  place: (body) => post('/guest-checkout/orders', body),
+  get: (token) => get(`/guest-checkout/orders/${token}`),
+  cancel: (token) => post(`/guest-checkout/orders/${token}/cancel`),
+  uploadPaymentProof: (token, formData) =>
+    post(`/guest-checkout/orders/${token}/payment-proof`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  requestCod: (token) => post(`/guest-checkout/orders/${token}/payment-method/cod`),
+};
+
 export const reviews = {
   all: (params) => get('/reviews', params),
   forProduct: (productId, params) => get(`/reviews/product/${productId}`, params),

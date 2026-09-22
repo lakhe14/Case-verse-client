@@ -9,6 +9,7 @@ import Reviews from './pages/Reviews';
 import NotFound from './pages/NotFound';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import GuestOrder from './pages/GuestOrder';
 import Wishlist from './pages/Wishlist';
 import InfoPage from './pages/InfoPage';
 
@@ -56,14 +57,8 @@ export default function App() {
         <Route path="privacy" element={<InfoPage type="privacy" />} />
         <Route path="contact" element={<InfoPage type="contact" />} />
         <Route path="cart" element={<Cart />} />
-        <Route
-          path="checkout"
-          element={
-            <ProtectedRoute>
-              <Checkout />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="checkout" element={<Checkout />} />
+        <Route path="order/guest/:token" element={<GuestOrder />} />
         <Route
           path="wishlist"
           element={

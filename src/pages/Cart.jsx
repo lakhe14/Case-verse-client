@@ -1,19 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner, Money, EmptyState, QuantityStepper } from '../components/ui';
 import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence, motion } from 'motion/react';
 import { MotionButton } from '../motion/MotionPrimitives';
 import SalePrice from '../components/SalePrice';
+import { useCampaign } from '../hooks/useCampaign';
 
 const BLANK_IMG =
   'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
 export default function Cart() {
   const { cart, loading, updateItem, removeItem } = useCart();
-  const { isCustomer } = useAuth();
+  const campaign = useCampaign();
   const toast = useToast();
   const navigate = useNavigate();
   usePageMeta('Your cart', 'Review the items in your CaseVerse cart before checkout.');
@@ -34,16 +34,6 @@ export default function Cart() {
     }
   };
 
-  if (!isCustomer) {
-    return (
-      <EmptyState title="Sign in to see your cart">
-        <p className="muted" style={{ maxWidth: '36ch', margin: '0 auto 14px' }}>
-          Your cart is saved to your account, so sign in to pick up where you left off.
-        </p>
-        <Link to="/login" className="btn sm">Sign in</Link>
-      </EmptyState>
-    );
-  }
   if (loading) return <Spinner />;
   if (!cart.items.length) {
     return (
@@ -108,7 +98,10 @@ export default function Cart() {
             ) : (
               <>
                 <p className="eyebrow">Dashain Trio Offer</p>
-                <p className="dashain-cart-line">Add 1 more eligible case to unlock 2 cases + a FREE suction holder for NPR 1,199.</p>
+                <p className="dashain-cart-line">
+                  Add 1 more eligible case to unlock {campaign?.required_case_quantity ?? 2} cases +
+                  a FREE suction holder for NPR {(campaign?.bundle_price ?? 1199).toLocaleString()}.
+                </p>
                 <Link to="/covers" className="btn subtle sm">Shop another case</Link>
               </>
             )}

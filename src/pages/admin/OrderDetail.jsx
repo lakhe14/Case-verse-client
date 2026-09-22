@@ -66,9 +66,30 @@ export default function AdminOrderDetail() {
         <StatusBadge status={o.status} />
       </div>
       <div className="muted small">
-        {o.user?.name}, {o.user?.email}
+        {o.user ? `${o.user.name}, ${o.user.email}` : `${o.guest_name} (guest), ${o.guest_phone}`}
       </div>
       <div className="muted small">Placed {new Date(o.placed_at).toLocaleString()}</div>
+
+      <div className="card">
+        <h3>Delivery</h3>
+        {o.shippingAddress ? (
+          <div className="muted small">
+            {o.shippingAddress.recipient_name}, {o.shippingAddress.phone}<br />
+            {o.shippingAddress.line1}{o.shippingAddress.line2 ? `, ${o.shippingAddress.line2}` : ''}, {o.shippingAddress.city}
+            {o.shippingAddress.state ? `, ${o.shippingAddress.state}` : ''}, {o.shippingAddress.country}
+          </div>
+        ) : (
+          <div className="muted small">
+            {o.guest_name} (guest), {o.guest_phone}<br />
+            {o.guest_area}, {o.guest_municipality}, {o.guest_district}, {o.guest_province}
+            {o.guest_landmark && <><br />Landmark: {o.guest_landmark}</>}
+            {o.guest_delivery_notes && <><br />Notes: {o.guest_delivery_notes}</>}
+            {o.guest_latitude != null && o.guest_longitude != null && (
+              <><br />Pinned location: {o.guest_latitude}, {o.guest_longitude}</>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="card">
         <h3>Update status</h3>

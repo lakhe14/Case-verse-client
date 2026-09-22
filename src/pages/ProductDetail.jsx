@@ -273,7 +273,6 @@ export default function ProductDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
-  const { isCustomer } = useAuth();
   const toast = useToast();
   const { data, loading, error } = useAsync(() => catalog.product(slug), [slug]);
 
@@ -299,12 +298,17 @@ export default function ProductDetail() {
   const hero = gallery?.[imgIdx] || gallery?.[0];
 
   const onAdd = async () => {
-    if (!isCustomer) return navigate('/login', { state: { from: { pathname: `/p/${slug}` } } });
     if (!active) return;
     setAdding(true);
     setAddError(null);
     try {
-      await addItem(active.id, qty);
+      await addItem(active.id, qty, {
+        product: { id: product.id, name: product.name, slug: product.slug, image: gallery?.[0]?.url || null },
+        sku: active.sku,
+        unit_price: active.price,
+        compare_at_price: active.compare_at_price,
+        stock_quantity: active.stock_quantity,
+      });
       setAdded(true);
       toast.success(`Added ${product.name} to your cart.`, {
         action: { label: 'View cart', onClick: () => navigate('/cart') },

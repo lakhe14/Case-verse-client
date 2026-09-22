@@ -208,7 +208,6 @@ function Navbar({ onCartOpen, cartButtonRef, scrolled, recede }) {
 
 function MiniCartDrawer({ open, onClose, returnFocusRef }) {
   const { cart, updateItem, removeItem } = useCart();
-  const { isCustomer } = useAuth();
   const toast = useToast();
   const panelRef = useRef(null);
   const closeRef = useRef(null);
@@ -251,17 +250,7 @@ function MiniCartDrawer({ open, onClose, returnFocusRef }) {
   };
 
   let body;
-  if (!isCustomer) {
-    body = (
-      <div className="minicart-body">
-        <div className="minicart-empty">
-          <p>Sign in to see your cart</p>
-          <p className="muted" style={{ marginBottom: 14 }}>Your cart is saved to your account.</p>
-          <Link to="/login" className="btn sm" onClick={onClose}>Sign in</Link>
-        </div>
-      </div>
-    );
-  } else if (items.length === 0) {
+  if (items.length === 0) {
     body = (
       <div className="minicart-body">
         <div className="minicart-empty">

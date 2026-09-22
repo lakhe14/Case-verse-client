@@ -42,7 +42,7 @@ export default function AdminOrders() {
                 {(data?.data || []).map((o) => (
                   <tr key={o.id}>
                     <td>{o.order_number}</td>
-                    <td>{o.user?.name}<div className="muted small">{o.user?.email}</div></td>
+                    <td>{o.user ? o.user.name : `${o.guest_name} (guest)`}<div className="muted small">{o.user ? o.user.email : o.guest_phone}</div></td>
                     <td>{new Date(o.placed_at).toLocaleDateString()}</td>
                     <td><Money value={o.total_amount} /></td>
                     <td><StatusBadge status={o.status} /></td>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { orders as orderApi } from '../api/endpoints';
+import { orders as orderApi, guestCheckout } from '../api/endpoints';
 import { ErrorText, Money, StatusBadge } from './ui';
 import { whatsapp } from '../config';
 
@@ -7,7 +7,8 @@ const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const labels = { pending: 'Awaiting payment', proof_uploaded: 'Proof submitted', approved: 'Verified', rejected: 'Proof rejected', cod_pending: 'COD pending', cod_confirmed: 'COD confirmed' };
 
-export default function PaymentConfirmation({ order, onUpdated }) {
+/** `guestToken` switches proof upload / COD request onto the public guest-checkout endpoints instead of the authenticated order endpoints — same UI, same validation, different ownership. */
+export default function PaymentConfirmation({ order, onUpdated, guestToken }) {
   const payment = order.paymentConfirmation;
   const inputRef = useRef(null);
   const [file, setFile] = useState(null);
@@ -64,7 +65,8 @@ export default function PaymentConfirmation({ order, onUpdated }) {
     setBusy(true); setError(null);
     try {
       const formData = new FormData(); formData.append('proof', file);
-      await orderApi.uploadPaymentProof(order.id, formData);
+      if (guestToken) await guestCheckout.uploadPaymentProof(guestToken, formData);
+      else await orderApi.uploadPaymentProof(order.id, formData);
       setFile(null); if (inputRef.current) inputRef.current.value = '';
       onUpdated?.();
     } catch (err) { setError(err); } finally { setBusy(false); }
@@ -72,7 +74,8 @@ export default function PaymentConfirmation({ order, onUpdated }) {
   const cod = async () => {
     setBusy(true); setError(null);
     try {
-      await orderApi.requestCod(order.id);
+      if (guestToken) await guestCheckout.requestCod(guestToken);
+      else await orderApi.requestCod(order.id);
       if (whatsapp.number) {
         const message = `Hello CaseVerse, I would like to confirm Cash on Delivery for order ${order.order_number}. Order total: NPR ${Number(order.total_amount).toFixed(0)}.`;
         window.open(`https://wa.me/${whatsapp.number}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
