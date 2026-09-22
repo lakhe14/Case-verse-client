@@ -306,7 +306,9 @@ export default function ProductDetail() {
     try {
       await addItem(active.id, qty);
       setAdded(true);
-      toast.success(`Added ${product.name} to your cart.`);
+      toast.success(`Added ${product.name} to your cart.`, {
+        action: { label: 'View cart', onClick: () => navigate('/cart') },
+      });
       setTimeout(() => setAdded(false), 2000);
     } catch (e) {
       setAddError(e);
@@ -388,6 +390,11 @@ export default function ProductDetail() {
           <MotionButton className="btn block" disabled={adding || !active?.in_stock} onClick={onAdd}>
             {added ? 'Added to cart' : adding ? 'Adding' : 'Add to cart'}
           </MotionButton>
+          {added && (
+            <Link to="/cart" className="pdp-added-hint">
+              View cart
+            </Link>
+          )}
           {active?.sku && <div className="muted small">SKU {active.sku}</div>}
         </div>
       </StaggerGroup>
