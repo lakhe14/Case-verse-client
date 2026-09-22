@@ -305,11 +305,7 @@ export default function Checkout() {
           )}
           <ErrorText error={placeError} />
           <p className="checkout-payment-note">
-            After placing your order, you will be asked to pay a <Money value={totals?.advance_amount} /> eSewa advance and upload
-            your payment proof.{' '}
-            {totals && (
-              <>Remaining on delivery: <Money value={totals.remaining_due} />.</>
-            )}
+            {totals && totals.advance_amount != null ? <>After placing your order, you will be asked to pay a <Money value={totals.advance_amount} /> eSewa advance and upload your payment proof. Remaining on delivery: <Money value={totals.remaining_due} />.</> : 'Advance amount will appear after delivery pricing is calculated.'}
           </p>
           <button
             className="btn block"
