@@ -41,6 +41,7 @@
 .sale-banner-link:hover { text-decoration: none; }
 .sale-banner-tag { color: #8ee7f3; letter-spacing: .1em; font-size: .68rem; font-weight: 700; }
 .sale-banner-sep { color: rgba(238, 242, 251, .35); }
+.sale-banner-detail { color: #c3cbd9; }
 .sale-banner-price { font-weight: 700; }
 .sale-banner-time { color: #c3cbd9; font-variant-numeric: tabular-nums; }
 .sale-banner-cta { display: inline-flex; align-items: center; gap: 4px; color: #8ee7f3; }
@@ -184,7 +185,7 @@
   .nav-stack { padding: 0 12px; }
   .sale-banner { margin-top: 10px; width: 100%; max-width: 480px; }
   .sale-banner-link { padding: 6px 14px; gap: 7px; font-size: .74rem; justify-content: center; }
-  .sale-banner-sep:nth-of-type(2), .sale-banner-price { display: none; }
+  .sale-banner-detail, .sale-banner-sep--detail, .sale-banner-cta, .sale-banner-sep--cta { display: none; }
   .nav { margin-top: 10px; width: 100%; border-radius: 14px; }
   .nav-inner { height: 60px; gap: 12px; padding: 0 14px; }
   .nav.is-scrolled .nav-inner { height: 54px; }

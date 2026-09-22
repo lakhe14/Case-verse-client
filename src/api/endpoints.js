@@ -24,6 +24,10 @@ export const catalog = {
   product: (slug) => get(`/products/${slug}`),
 };
 
+export const campaign = {
+  dashain: () => get('/campaign/dashain'),
+};
+
 export const addresses = {
   list: () => get('/addresses'),
   create: (body) => post('/addresses', body),

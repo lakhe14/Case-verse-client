@@ -328,6 +328,9 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 .cart-line:first-child { padding-top: 0; }
 .cart-thumb { width: 76px; height: 92px; object-fit: cover; background: var(--paper-dark); flex: none; }
 .summary-box { background: var(--paper-dark); border: 1px solid var(--brass-line-soft); border-radius: 4px; padding: 22px; }
+.dashain-cart-card { border-color: rgba(142, 231, 243, 0.3) !important; }
+.dashain-cart-card .eyebrow { color: #8ee7f3 !important; }
+.dashain-cart-line { margin: 6px 0 10px; font-weight: 600; }
 .summary-row { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 0.94rem; }
 .summary-total { display: flex; justify-content: space-between; font-family: var(--font-display); font-size: 1.25rem; color: var(--ink); border-top: 1px solid var(--brass-line); padding-top: 12px; margin-top: 4px; }
 

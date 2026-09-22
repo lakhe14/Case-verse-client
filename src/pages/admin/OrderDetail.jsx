@@ -101,9 +101,16 @@ export default function AdminOrderDetail() {
               <Money value={it.line_total} />
             </div>
           ))}
+          {(o.promoItems || []).map((p) => (
+            <div key={p.id} className="spread" style={{ borderTop: '1px solid var(--line)', paddingTop: 6, marginTop: 6 }}>
+              <span>{p.name_snap} × {p.quantity} <span className="muted small">(promo item)</span></span>
+              <span>FREE</span>
+            </div>
+          ))}
         </div>
         <div className="card" style={{ flex: '0 0 260px' }}>
           <h3>Totals</h3>
+          {o.campaign_name_snap && <p className="muted small" style={{ marginTop: 0 }}>{o.campaign_name_snap} ({o.campaign_code})</p>}
           <div className="spread"><span className="muted">Subtotal</span><Money value={o.subtotal_amount} /></div>
           {Number(o.bundle_discount_amount) > 0 && (
             <div className="spread">

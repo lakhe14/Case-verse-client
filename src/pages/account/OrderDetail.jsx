@@ -95,10 +95,19 @@ export default function OrderDetail() {
               {reviewed.includes(it.id) && <span className="badge approved">Review submitted</span>}
             </div>
           ))}
+          {(o.promoItems || []).map((p) => (
+            <div key={p.id} style={{ borderTop: '1px solid var(--brass-line-soft)', paddingTop: 8, marginTop: 8 }}>
+              <div className="spread">
+                <span>{p.name_snap} × {p.quantity}</span>
+                <span style={{ color: 'var(--sage)' }}>FREE</span>
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="card order-detail-totals" style={{ flex: '0 0 260px' }}>
           <h4>Totals</h4>
+          {o.campaign_name_snap && <p className="eyebrow" style={{ marginTop: 0 }}>{o.campaign_name_snap}</p>}
           <div className="spread"><span className="muted">Subtotal</span><Money value={o.subtotal_amount} /></div>
           {Number(o.bundle_discount_amount) > 0 && (
             <div className="spread">

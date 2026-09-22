@@ -177,15 +177,21 @@ export default function Checkout() {
 
           <div className="card">
             <h3>Coupon</h3>
-            <form className="row" style={{ gap: 8 }} onSubmit={applyCoupon}>
-              <input
-                placeholder="Coupon code"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <button className="btn subtle">Apply</button>
-            </form>
+            {totals?.campaign_active ? (
+              <p className="muted small" style={{ marginBottom: 0 }}>
+                Coupon codes cannot be combined with the Dashain Trio Offer.
+              </p>
+            ) : (
+              <form className="row" style={{ gap: 8 }} onSubmit={applyCoupon}>
+                <input
+                  placeholder="Coupon code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <button className="btn subtle">Apply</button>
+              </form>
+            )}
             {appliedCoupon && totals?.coupon && (
               <p className="small" style={{ color: 'var(--sage)', marginBottom: 0 }}>
                 “{appliedCoupon}” applied: {totals.coupon.description}.{' '}
@@ -229,13 +235,24 @@ export default function Checkout() {
             <Spinner />
           ) : (
             <div>
+              {totals.campaign_active && totals.bundle_discount > 0 && (
+                <p className="eyebrow" style={{ marginBottom: 6 }}>{totals.campaign_label}</p>
+              )}
               <div className="checkout-price-lines">{(totals.lines || []).map((line) => <div className="spread small" key={line.variant_id}><span>{line.name} × {line.quantity}</span><SalePrice price={line.unit_price} compareAt={line.compare_at_price} compact /></div>)}</div>
               <div className="summary-row"><span className="muted">Subtotal</span><Money value={totals.subtotal} /></div>
               {totals.bundle_discount > 0 && (
-                <div className="summary-row">
-                  <span className="muted">Cover bundle discount</span>
-                  <span style={{ whiteSpace: 'nowrap' }}>−<Money value={totals.bundle_discount} /></span>
-                </div>
+                <>
+                  <div className="summary-row">
+                    <span className="muted">Dashain bundle discount</span>
+                    <span style={{ whiteSpace: 'nowrap' }}>−<Money value={totals.bundle_discount} /></span>
+                  </div>
+                  {(totals.free_items || []).map((item) => (
+                    <div className="summary-row" key={item.type}>
+                      <span className="muted">{item.name} × {item.quantity}</span>
+                      <span>FREE</span>
+                    </div>
+                  ))}
+                </>
               )}
               {totals.coupon_discount > 0 && (
                 <div className="summary-row"><span className="muted">Coupon</span><span>−<Money value={totals.coupon_discount} /></span></div>
@@ -251,7 +268,13 @@ export default function Checkout() {
             </div>
           )}
           <ErrorText error={placeError} />
-          <p className="checkout-payment-note">After placing your order, you will be asked to pay a NPR 100 eSewa advance and upload your payment proof.</p>
+          <p className="checkout-payment-note">
+            After placing your order, you will be asked to pay a NPR 100 eSewa advance and upload
+            your payment proof.{' '}
+            {totals && (
+              <>Remaining on delivery: <Money value={Math.max(totals.total_amount - 100, 0)} />.</>
+            )}
+          </p>
           <button
             className="btn block"
             style={{ marginTop: 14 }}

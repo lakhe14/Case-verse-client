@@ -94,7 +94,27 @@ export default function Cart() {
           </AnimatePresence>
         </div>
 
-        <div className="summary-box cart-summary" style={{ flex: '1 1 300px' }}>
+        <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {cart.campaign_active && (
+          <div className="card dashain-cart-card" aria-live="polite">
+            {cart.bundle_discount > 0 ? (
+              <>
+                <p className="eyebrow">Dashain Trio Offer unlocked</p>
+                <p className="dashain-cart-line">{cart.covers_qty} eligible case{cart.covers_qty === 1 ? '' : 's'} + FREE suction holder</p>
+                <p className="muted small">
+                  Regular <Money value={cart.covers_qty * 699} /> — Dashain price saves <Money value={cart.bundle_discount} />.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="eyebrow">Dashain Trio Offer</p>
+                <p className="dashain-cart-line">Add 1 more eligible case to unlock 2 cases + a FREE suction holder for NPR 1,199.</p>
+                <Link to="/covers" className="btn subtle sm">Shop another case</Link>
+              </>
+            )}
+          </div>
+        )}
+        <div className="summary-box cart-summary">
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 500, marginTop: 0 }}>Summary</h3>
           <div className="summary-row">
             <span className="muted">Subtotal</span>
@@ -103,9 +123,15 @@ export default function Cart() {
           {cart.bundle_discount > 0 && (
             <>
               <div className="summary-row">
-                <span className="muted">Cover bundle discount</span>
+                <span className="muted">Dashain bundle discount</span>
                 <span style={{ whiteSpace: 'nowrap' }}>−<Money value={cart.bundle_discount} /></span>
               </div>
+              {cart.free_items.map((item) => (
+                <div className="summary-row" key={item.type}>
+                  <span className="muted">{item.name} × {item.quantity}</span>
+                  <span>FREE</span>
+                </div>
+              ))}
               <div className="summary-row">
                 <span className="muted">Estimated total</span>
                 <Money value={cart.estimated_total} />
@@ -114,7 +140,7 @@ export default function Cart() {
           )}
           <p className="muted small">
             {cart.bundle_discount > 0
-              ? 'Any 2 covers count as 1199. Shipping and coupons are calculated at checkout.'
+              ? 'Coupons cannot be combined with the Dashain offer. Shipping is calculated at checkout.'
               : 'Shipping and any discounts are calculated at checkout.'}
           </p>
           <MotionButton
@@ -125,6 +151,7 @@ export default function Cart() {
           >
             {cart.has_stock_issue ? 'Fix stock issues to continue' : 'Checkout'}
           </MotionButton>
+        </div>
         </div>
       </div>
     </div>

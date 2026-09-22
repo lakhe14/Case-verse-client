@@ -29,6 +29,13 @@
 
 .home-section { max-width: 1280px; margin: 0 auto; padding: var(--section-md) max(24px, 5vw); }
 .home-section h2, .brand-statement h2 { margin: 0; font-family: var(--font-body); font-size: clamp(2.75rem, 6vw, 6.5rem); line-height: .92; letter-spacing: -.065em; }
+.dashain-section { max-width: 900px; }
+.dashain-section-inner { text-align: center; }
+.dashain-section h2 { font-size: clamp(2.2rem, 4.6vw, 3.6rem); }
+.dashain-section-copy { max-width: 46ch; margin: 18px auto 0; font-size: 1.05rem; color: var(--ink-soft); }
+.dashain-section-price { margin: 22px 0 4px; font-family: var(--font-display); font-size: clamp(2.6rem, 6vw, 4rem); color: #8ee7f3; }
+.dashain-section-compare { margin: 0 0 26px; color: var(--ink-soft); font-size: .92rem; }
+
 .featured-covers { position: relative; z-index: 1; max-width: none; margin-top: 0; padding-right: max(7vw, calc((100vw - 1280px) / 2)); padding-left: max(7vw, calc((100vw - 1280px) / 2)); color: #0c1016; background: #f1f4f8; }
 .featured-covers .eyebrow { color: #405377 !important; }
 .featured-covers h2 { max-width: 650px; }

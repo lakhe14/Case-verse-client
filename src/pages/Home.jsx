@@ -5,6 +5,7 @@ import { catalog } from '../api/endpoints';
 import ProductCard from '../components/ProductCard';
 import { Spinner, Stars } from '../components/ui';
 import SalePrice from '../components/SalePrice';
+import DashainSection from '../components/DashainSection';
 import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Reveal, StaggerGroup } from '../motion/MotionPrimitives';
@@ -53,6 +54,7 @@ export default function Home() {
     <div className="home-art full-bleed">
       <h1 className="sr-only">CaseVerse: iPhone covers, shipped across Nepal</h1>
       <section className="hero-single"><HeroPanel products={visualProducts} /></section>
+      <DashainSection />
       <section className="home-section featured-covers"><Reveal><p className="eyebrow">THE COLLECTION</p><h2>Built around<br />your iPhone.</h2></Reveal><div className="editorial-grid">{editorial.map((product, i) => <Link className={`editorial-card editorial-card--${i}`} key={product.id} to={`/p/${product.slug}`}><img src={product.images[0].url} alt={product.name} loading="lazy" /><span>{i === 0 ? 'Featured cover' : 'New arrival'}</span><strong>{product.name}</strong><em><SalePrice price={product.price_from} compareAt={product.compare_at_price_from} compact /></em></Link>)}</div></section>
       <Suspense fallback={<div className="story-fallback" />}><ProductStory /></Suspense>
       <section className="home-section why-section"><Reveal className="line-reveal"><p className="eyebrow">WHY CASEVERSE</p><h2><span>Less noise.</span><span>More considered.</span></h2></Reveal><StaggerGroup className="feature-columns">{[['01','Exact model match','Choose the phone model that fits your device, directly from real available stock.'],['02','Selected, not crowded','A focused edit of styles for the iPhone you use every day.'],['03','Across Nepal','Protection and personality, delivered where you are.']].map(([number,title,copy]) => <motion.article variants={reveal} key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></motion.article>)}</StaggerGroup></section>
