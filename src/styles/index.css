@@ -267,11 +267,8 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 /* Product detail */
 .pdp-price { font-family: var(--font-display); font-size: clamp(1.7rem, 3.4vw, 2.4rem); color: var(--oxblood); line-height: 1; }
 .pdp-cat { font-size: 0.86rem; color: var(--ink-soft); }
-.pdp-added-hint {
-  align-self: flex-start; margin-top: -6px; font-size: 0.86rem; font-weight: 600;
-  color: var(--oxblood); animation: pdp-fade 0.2s ease;
-}
-.pdp-added-hint:hover { text-decoration: underline; }
+.pdp-cart-actions { display: flex; flex-direction: column; gap: 10px; }
+.pdp-view-cart { animation: pdp-fade 0.2s ease; }
 .pdp-media { aspect-ratio: 1 / 1; background: var(--paper-dark); overflow: hidden; }
 .pdp-media img { width: 100%; height: 100%; object-fit: cover; }
 /* Variant / thumbnail change: crossfade rather than a hard image swap. */
@@ -388,11 +385,11 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 .toast-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .toast-body > span { word-break: break-word; }
 .toast-action {
-  align-self: flex-start; background: none; border: 1px solid currentColor; color: inherit;
-  border-radius: 4px; padding: 8px 14px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  align-self: flex-start; background: rgba(123, 45, 38, 0.08); color: var(--oxblood);
+  border: 1px solid var(--oxblood); border-radius: 3px;
+  padding: 8px 14px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
 }
-.toast-action:hover { background: rgba(42, 31, 26, 0.06); }
-.toast-action:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.toast-action:hover { background: var(--oxblood); color: var(--brand-ink); }
 .toast-close {
   flex: none; background: none; border: 0; cursor: pointer;
   font-size: 1.1rem; line-height: 1; color: var(--ink-soft); padding: 0 2px;

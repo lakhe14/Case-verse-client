@@ -387,14 +387,16 @@ export default function ProductDetail() {
           </div>
 
           <ErrorText error={addError} />
-          <MotionButton className="btn block" disabled={adding || !active?.in_stock} onClick={onAdd}>
-            {added ? 'Added to cart' : adding ? 'Adding' : 'Add to cart'}
-          </MotionButton>
-          {added && (
-            <Link to="/cart" className="pdp-added-hint">
-              View cart
-            </Link>
-          )}
+          <div className="pdp-cart-actions">
+            <MotionButton className="btn block" disabled={adding || !active?.in_stock} onClick={onAdd}>
+              {added ? 'Added to cart' : adding ? 'Adding' : 'Add to cart'}
+            </MotionButton>
+            {added && (
+              <Link to="/cart" className="btn subtle block pdp-view-cart">
+                View cart
+              </Link>
+            )}
+          </div>
           {active?.sku && <div className="muted small">SKU {active.sku}</div>}
         </div>
       </StaggerGroup>
