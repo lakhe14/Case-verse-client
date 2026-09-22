@@ -85,7 +85,7 @@ export default function Cart() {
         </div>
 
         <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {cart.campaign_active && (
+        {cart.campaign_active && campaign?.bundle_price != null && (
           <div className="card dashain-cart-card" aria-live="polite">
             {cart.bundle_discount > 0 ? (
               <>
@@ -100,7 +100,7 @@ export default function Cart() {
                 <p className="eyebrow">Dashain Trio Offer</p>
                 <p className="dashain-cart-line">
                   Add 1 more eligible case to unlock {campaign?.required_case_quantity ?? 2} cases +
-                  a FREE suction holder for NPR {(campaign?.bundle_price ?? 1199).toLocaleString()}.
+                  a FREE suction holder for NPR {campaign.bundle_price.toLocaleString()}.
                 </p>
                 <Link to="/covers" className="btn subtle sm">Shop another case</Link>
               </>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { addresses as addressApi, orders as orderApi, loyalty as loyaltyApi } from '../api/endpoints';
+import { addresses as addressApi, orders as orderApi, loyalty as loyaltyApi, shipping as shippingApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -30,6 +30,9 @@ export default function Checkout() {
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [destinations, setDestinations] = useState([]);
+  const [destinationId, setDestinationId] = useState('');
+  const [destinationError, setDestinationError] = useState(null);
 
   useEffect(() => {
     if (!isCustomer) {
@@ -51,14 +54,16 @@ export default function Checkout() {
         setLoadError(e);
       });
     loyaltyApi.balance().then((r) => setPointsBalance(r.data.points)).catch(() => {});
+    shippingApi.parcelmooverDestinations().then((r) => setDestinations(r.data)).catch((e) => setDestinationError(e));
   }, [isCustomer]);
 
   useEffect(() => {
-    if (!isCustomer || !shippingId) return;
+    if (!isCustomer || !shippingId || !destinationId) return;
     setPreviewError(null);
     orderApi
       .preview({
         shipping_address_id: shippingId,
+        parcelmoover_destination_id: destinationId,
         coupon_code: appliedCoupon || undefined,
         redeem_points: redeemPoints || undefined,
       })
@@ -67,7 +72,7 @@ export default function Checkout() {
         setPreviewError(e);
         setPreview(null);
       });
-  }, [shippingId, appliedCoupon, redeemPoints]);
+  }, [shippingId, destinationId, appliedCoupon, redeemPoints]);
   // preview response is { data } shaped? endpoint returns r.data => the JSON body { data }
   // orderApi.preview returns response.data (the body). body = { data: {...} }
 
@@ -125,6 +130,7 @@ export default function Checkout() {
     try {
       const res = await orderApi.place({
         shipping_address_id: shippingId,
+        parcelmoover_destination_id: destinationId,
         billing_address_id: billingSame ? shippingId : billingId,
         coupon_code: appliedCoupon || undefined,
         redeem_points: redeemPoints || undefined,
@@ -148,6 +154,14 @@ export default function Checkout() {
         <div className="col checkout-form" style={{ flex: '1 1 320px', minWidth: 0 }}>
           <div className="card">
             <h3>Shipping address</h3>
+            <label className="field" style={{ marginBottom: 12 }}>
+              <span className="field-label">ParcelMoover delivery destination</span>
+              <select required value={destinationId} onChange={(event) => setDestinationId(event.target.value)}>
+                <option value="">Select a delivery destination</option>
+                {destinations.map((destination) => <option key={destination.id} value={destination.id}>{destination.name}{destination.zone ? ` — ${destination.zone}` : ''}</option>)}
+              </select>
+              {destinationError && <span className="field-error">Delivery destinations are temporarily unavailable. Please try again.</span>}
+            </label>
             <div className="stack">
               {addrs.map((a) => (
                 <label key={a.id} className="row" style={{ alignItems: 'flex-start' }}>
@@ -285,16 +299,16 @@ export default function Checkout() {
           )}
           <ErrorText error={placeError} />
           <p className="checkout-payment-note">
-            After placing your order, you will be asked to pay a NPR 100 eSewa advance and upload
+            After placing your order, you will be asked to pay a <Money value={totals?.advance_amount} /> eSewa advance and upload
             your payment proof.{' '}
             {totals && (
-              <>Remaining on delivery: <Money value={Math.max(totals.total_amount - 100, 0)} />.</>
+              <>Remaining on delivery: <Money value={totals.remaining_due} />.</>
             )}
           </p>
           <button
             className="btn block"
             style={{ marginTop: 14 }}
-            disabled={placing || !totals || cart.has_stock_issue}
+            disabled={placing || !totals || !destinationId || cart.has_stock_issue}
             onClick={placeOrder}
           >
             {placing ? 'Placing order' : 'Place order & continue to payment'}

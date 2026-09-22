@@ -117,6 +117,7 @@ export default function OrderDetail() {
           )}
           <div className="spread"><span className="muted">Discount</span><Money value={o.discount_amount} /></div>
           <div className="spread"><span className="muted">Shipping</span><Money value={o.shipping_amount} /></div>
+          {o.courier_destination_name && <div className="spread small"><span className="muted">ParcelMoover destination</span><span>{o.courier_destination_name}</span></div>}
           <div className="spread money-serif" style={{ fontSize: '1.1rem', borderTop: '1px solid var(--brass-line)', paddingTop: 10, marginTop: 4 }}>
             <span>Total</span><Money value={o.total_amount} />
           </div>

@@ -72,6 +72,7 @@ export default function AdminOrderDetail() {
 
       <div className="card">
         <h3>Delivery</h3>
+        {o.courier_destination_name && <p className="muted small">ParcelMoover: {o.courier_destination_name} · <Money value={o.courier_delivery_charge ?? o.shipping_amount} /></p>}
         {o.shippingAddress ? (
           <div className="muted small">
             {o.shippingAddress.recipient_name}, {o.shippingAddress.phone}<br />

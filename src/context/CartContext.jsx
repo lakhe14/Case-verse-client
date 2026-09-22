@@ -43,18 +43,24 @@ function writeGuestLines(lines) {
  * guest-checkout preview endpoint, never trusted from the snapshot.
  */
 function shapeGuestCart(lines, priced) {
-  const items = lines.map((l) => ({
+  const serverLines = new Map((priced?.lines || []).map((line) => [line.variant_id, line]));
+  const items = lines.map((l) => {
+    const serverLine = serverLines.get(l.variant_id);
+    return ({
     id: `guest-${l.variant_id}`,
     variant_id: l.variant_id,
     quantity: l.quantity,
-    unit_price: l.unit_price,
-    compare_at_price: l.compare_at_price,
-    line_total: Number((l.unit_price * l.quantity).toFixed(2)),
+    // Once preview succeeds, these are server-authoritative rather than the
+    // localStorage snapshot captured when the guest added the item.
+    unit_price: serverLine?.unit_price ?? l.unit_price,
+    compare_at_price: serverLine?.compare_at_price ?? l.compare_at_price,
+    line_total: serverLine?.line_total ?? Number((l.unit_price * l.quantity).toFixed(2)),
     available_stock: l.stock_quantity,
     stock_ok: l.quantity <= l.stock_quantity,
     product: l.product,
     sku: l.sku,
-  }));
+    });
+  });
   const subtotal = Number(items.reduce((s, i) => s + i.line_total, 0).toFixed(2));
   if (!priced) {
     return {

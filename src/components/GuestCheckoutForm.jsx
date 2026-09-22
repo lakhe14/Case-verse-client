@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { guestCheckout } from '../api/endpoints';
+import { guestCheckout, shipping as shippingApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner, ErrorText, Money } from './ui';
 import SalePrice from './SalePrice';
 
 const EMPTY_GUEST = {
-  name: '', phone: '', province: '', district: '', municipality: '', area: '', landmark: '', notes: '',
+  name: '', phone: '', province: '', district: '', municipality: '', area: '', landmark: '', notes: '', parcelmoover_destination_id: '', parcelmoover_destination_name: '',
 };
 
 function useGeolocation() {
@@ -60,8 +60,14 @@ export default function GuestCheckoutForm() {
   const [previewError, setPreviewError] = useState(null);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState(null);
+  const [destinations, setDestinations] = useState([]);
+  const [destinationsError, setDestinationsError] = useState(null);
 
   const setField = (field) => (e) => setGuest((g) => ({ ...g, [field]: e.target.value }));
+
+  useEffect(() => {
+    shippingApi.parcelmooverDestinations().then((r) => setDestinations(r.data)).catch((e) => setDestinationsError(e));
+  }, []);
 
   useEffect(() => {
     const items = cart.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity }));
@@ -70,7 +76,7 @@ export default function GuestCheckoutForm() {
     guestCheckout
       .preview({
         items,
-        guest: guest.municipality && guest.province ? { municipality: guest.municipality, province: guest.province } : undefined,
+        guest: guest.municipality && guest.province && guest.parcelmoover_destination_id ? { municipality: guest.municipality, province: guest.province, parcelmoover_destination_id: guest.parcelmoover_destination_id } : undefined,
       })
       .then((r) => setPreview(r.data))
       .catch((e) => {
@@ -78,7 +84,7 @@ export default function GuestCheckoutForm() {
         setPreviewError(e);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart.items, guest.municipality, guest.province]);
+  }, [cart.items, guest.municipality, guest.province, guest.parcelmoover_destination_id]);
 
   const placeOrder = async (e) => {
     e.preventDefault();
@@ -133,6 +139,17 @@ export default function GuestCheckoutForm() {
           </div>
           {geo.message && <p className="muted small" role="status">{geo.message}</p>}
           <div className="stack" style={{ marginTop: 8 }}>
+            <label className="field">
+              <span className="field-label">ParcelMoover delivery destination</span>
+              <select required value={guest.parcelmoover_destination_id} onChange={(event) => {
+                const destination = destinations.find((item) => item.id === event.target.value);
+                setGuest((value) => ({ ...value, parcelmoover_destination_id: event.target.value, parcelmoover_destination_name: destination?.name || '' }));
+              }}>
+                <option value="">Select a delivery destination</option>
+                {destinations.map((destination) => <option key={destination.id} value={destination.id}>{destination.name}{destination.zone ? ` — ${destination.zone}` : ''}</option>)}
+              </select>
+              {destinationsError && <span className="field-error">Delivery destinations are temporarily unavailable. Please try again.</span>}
+            </label>
             <label className="field">
               <span className="field-label">Province</span>
               <input required value={guest.province} onChange={setField('province')} maxLength={100} />
@@ -202,16 +219,16 @@ export default function GuestCheckoutForm() {
             <div className="summary-total"><span>Total</span><Money value={totals.total_amount} /></div>
             {totals.shipping_method && <p className="muted small" style={{ marginTop: 8 }}>{totals.shipping_method}</p>}
             {!totals.shipping_method && (
-              <p className="muted small" style={{ marginTop: 8 }}>Fill in your municipality and province for an exact shipping cost.</p>
+              <p className="muted small" style={{ marginTop: 8 }}>Select a ParcelMoover delivery destination and enter your physical address for an exact shipping cost.</p>
             )}
           </div>
         )}
         <ErrorText error={previewError} />
         <ErrorText error={placeError} />
         <p className="checkout-payment-note">
-          After placing your order, you will be asked to pay a NPR 100 eSewa advance and upload your
+          After placing your order, you will be asked to pay a <Money value={totals?.advance_amount} /> eSewa advance and upload your
           payment proof.{' '}
-          {totals && <>Remaining on delivery: <Money value={Math.max(totals.total_amount - 100, 0)} />.</>}
+          {totals && <>Remaining on delivery: <Money value={totals.remaining_due} />.</>}
         </p>
         <button type="submit" className="btn block" style={{ marginTop: 14 }} disabled={placing || !totals || !cart.items.length || cart.has_stock_issue}>
           {placing ? 'Placing order' : 'Place order & continue to payment'}

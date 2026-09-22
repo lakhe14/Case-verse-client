@@ -31,6 +31,10 @@ export default function PaymentConfirmation({ order, onUpdated, guestToken }) {
   if (!payment) return null;
   if (order.status === 'cancelled') return <section className="payment-confirmation card"><div className="spread"><div><p className="eyebrow">ORDER CANCELLED</p><h3>Payment confirmation closed</h3></div><StatusBadge status="cancelled" label="Cancelled" /></div><p className="payment-confirmation__message">This order was cancelled before confirmation. Payment proof upload and COD requests are no longer available.</p></section>;
   const completed = ['approved', 'cod_confirmed'].includes(payment.status);
+  // Historical rows may predate the required advance field. Do not invent a
+  // charge client-side, but never render NaN in the payment UI.
+  const parsedAdvance = Number(payment.advance_amount);
+  const advanceAmount = Number.isFinite(parsedAdvance) && parsedAdvance >= 0 ? parsedAdvance : 0;
 
   const handleFile = (selected) => {
     setError(null);
@@ -87,11 +91,11 @@ export default function PaymentConfirmation({ order, onUpdated, guestToken }) {
   return <section className="payment-confirmation card" aria-labelledby="payment-title">
     <div className="spread payment-confirmation__head"><div><p className="eyebrow">ORDER CONFIRMATION</p><h3 id="payment-title">Confirm your order</h3></div><StatusBadge status={payment.status} label={labels[payment.status]} /></div>
     {completed ? <p className="payment-confirmation__message">Your payment confirmation has been verified. Your order is now being prepared.</p> : <>
-      <p className="payment-confirmation__message">To confirm order <strong>{order.order_number}</strong>, pay <strong>NPR {Number(payment.advance_amount || 100).toFixed(0)}</strong> in advance with eSewa and upload your payment screenshot.</p>
+      <p className="payment-confirmation__message">To confirm order <strong>{order.order_number}</strong>, pay <strong>NPR {advanceAmount.toFixed(0)}</strong> in advance with eSewa and upload your payment screenshot.</p>
       {payment.status === 'rejected' && <p className="alert error">Proof rejected{payment.admin_note ? `: ${payment.admin_note}` : '. Please upload a new screenshot.'}</p>}
       <div className="payment-confirmation__layout">
         <div className="payment-confirmation__pay">
-          <div className="payment-amount"><span>Advance amount</span><strong><Money value={payment.advance_amount || 100} /></strong></div>
+          <div className="payment-amount"><span>Advance amount</span><strong><Money value={advanceAmount} /></strong></div>
           <p className="muted small">Provider: eSewa. Your order total remains <Money value={order.total_amount} />.</p>
           <figure className="payment-qr"><img src="/assets/caseverse/esewa_qr.jpeg" alt="eSewa advance payment QR code" /><figcaption>Scan to pay with eSewa</figcaption></figure>
           <ol className="payment-steps">
