@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { addresses as addressApi, orders as orderApi, loyalty as loyaltyApi, shipping as shippingApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
@@ -33,6 +33,7 @@ export default function Checkout() {
   const [destinations, setDestinations] = useState([]);
   const [destinationId, setDestinationId] = useState('');
   const [destinationError, setDestinationError] = useState(null);
+  const quoteRequest = useRef(0);
 
   useEffect(() => {
     if (!isCustomer) {
@@ -58,7 +59,13 @@ export default function Checkout() {
   }, [isCustomer]);
 
   useEffect(() => {
-    if (!isCustomer || !shippingId || !destinationId) return;
+    if (!isCustomer || !shippingId || !destinationId) {
+      quoteRequest.current += 1;
+      setPreview(null);
+      return;
+    }
+    const requestId = ++quoteRequest.current;
+    setPreview(null);
     setPreviewError(null);
     orderApi
       .preview({
@@ -67,10 +74,9 @@ export default function Checkout() {
         coupon_code: appliedCoupon || undefined,
         redeem_points: redeemPoints || undefined,
       })
-      .then(setPreview)
+      .then((result) => { if (quoteRequest.current === requestId) setPreview(result); })
       .catch((e) => {
-        setPreviewError(e);
-        setPreview(null);
+        if (quoteRequest.current === requestId) { setPreviewError(e); setPreview(null); }
       });
   }, [shippingId, destinationId, appliedCoupon, redeemPoints]);
   // preview response is { data } shaped? endpoint returns r.data => the JSON body { data }

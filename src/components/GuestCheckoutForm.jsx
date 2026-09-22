@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { guestCheckout, shipping as shippingApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
@@ -62,6 +62,7 @@ export default function GuestCheckoutForm() {
   const [placeError, setPlaceError] = useState(null);
   const [destinations, setDestinations] = useState([]);
   const [destinationsError, setDestinationsError] = useState(null);
+  const quoteRequest = useRef(0);
 
   const setField = (field) => (e) => setGuest((g) => ({ ...g, [field]: e.target.value }));
 
@@ -72,16 +73,17 @@ export default function GuestCheckoutForm() {
   useEffect(() => {
     const items = cart.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity }));
     if (!items.length) return;
+    const requestId = ++quoteRequest.current;
+    setPreview(null);
     setPreviewError(null);
     guestCheckout
       .preview({
         items,
         guest: guest.municipality && guest.province && guest.parcelmoover_destination_id ? { municipality: guest.municipality, province: guest.province, parcelmoover_destination_id: guest.parcelmoover_destination_id } : undefined,
       })
-      .then((r) => setPreview(r.data))
+      .then((r) => { if (quoteRequest.current === requestId) setPreview(r.data); })
       .catch((e) => {
-        setPreview(null);
-        setPreviewError(e);
+        if (quoteRequest.current === requestId) { setPreview(null); setPreviewError(e); }
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart.items, guest.municipality, guest.province, guest.parcelmoover_destination_id]);
@@ -230,7 +232,7 @@ export default function GuestCheckoutForm() {
           payment proof.{' '}
           {totals && <>Remaining on delivery: <Money value={totals.remaining_due} />.</>}
         </p>
-        <button type="submit" className="btn block" style={{ marginTop: 14 }} disabled={placing || !totals || !cart.items.length || cart.has_stock_issue}>
+        <button type="submit" className="btn block" style={{ marginTop: 14 }} disabled={placing || !totals || !guest.parcelmoover_destination_id || !cart.items.length || cart.has_stock_issue}>
           {placing ? 'Placing order' : 'Place order & continue to payment'}
         </button>
       </div>
