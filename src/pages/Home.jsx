@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import useAsync from '../hooks/useAsync';
 import { catalog } from '../api/endpoints';
 import ProductCard from '../components/ProductCard';
@@ -13,11 +13,80 @@ import { motionTokens, reveal } from '../motion/motionConfig';
 
 const ProductStory = lazy(() => import('../components/ProductStory'));
 const FEATURED_SLUGS = ['pink-floral', 'bow-cherry-iconic', 'chetah-iconic'];
+const featuredReveal = {
+  hidden: { opacity: 0, y: 28, scale: 0.985 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.52, ease: motionTokens.ease.standard } },
+};
+
+function canUsePointerMotion(event, reduce) {
+  return !reduce && event.pointerType === 'mouse' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
+function usePointerMotion(reduce, type) {
+  const ref = useRef(null);
+  const frame = useRef(null);
+
+  useEffect(() => () => {
+    if (frame.current) window.cancelAnimationFrame(frame.current);
+  }, []);
+
+  const reset = () => {
+    const element = ref.current;
+    if (!element) return;
+    if (frame.current) window.cancelAnimationFrame(frame.current);
+    frame.current = null;
+    element.classList.remove('is-pointer-active');
+    element.style.setProperty('--pointer-x', '50%');
+    element.style.setProperty('--pointer-y', '50%');
+    if (type === 'card') {
+      element.style.setProperty('--tilt-x', '0deg');
+      element.style.setProperty('--tilt-y', '0deg');
+      element.style.setProperty('--image-x', '0px');
+      element.style.setProperty('--image-y', '0px');
+    }
+    if (type === 'cta') {
+      element.style.setProperty('--cta-x', '0px');
+      element.style.setProperty('--cta-y', '0px');
+    }
+  };
+
+  const onPointerEnter = (event) => {
+    if (!canUsePointerMotion(event, reduce)) return;
+    ref.current?.classList.add('is-pointer-active');
+  };
+
+  const onPointerMove = (event) => {
+    if (!canUsePointerMotion(event, reduce)) return;
+    const element = ref.current;
+    if (!element || frame.current) return;
+    const { left, top, width, height } = element.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (event.clientX - left) / width));
+    const y = Math.min(1, Math.max(0, (event.clientY - top) / height));
+    frame.current = window.requestAnimationFrame(() => {
+      frame.current = null;
+      element.style.setProperty('--pointer-x', `${x * 100}%`);
+      element.style.setProperty('--pointer-y', `${y * 100}%`);
+      if (type === 'card') {
+        element.style.setProperty('--tilt-x', `${(0.5 - y) * 4}deg`);
+        element.style.setProperty('--tilt-y', `${(x - 0.5) * 5}deg`);
+        element.style.setProperty('--image-x', `${(x - 0.5) * 7}px`);
+        element.style.setProperty('--image-y', `${(y - 0.5) * 6}px`);
+      }
+      if (type === 'cta') {
+        element.style.setProperty('--cta-x', `${(x - 0.5) * 5}px`);
+        element.style.setProperty('--cta-y', `${(y - 0.5) * 3}px`);
+      }
+    });
+  };
+
+  return { ref, onPointerEnter, onPointerMove, onPointerLeave: reset };
+}
 
 function FeaturedCase({ product, reduce }) {
+  const pointer = usePointerMotion(reduce, 'card');
   if (!product) {
     return (
-      <motion.article className="featured-case featured-case--missing" variants={reveal}>
+      <motion.article className="featured-case featured-case--missing" variants={featuredReveal}>
         <p className="featured-case__label">Featured case</p>
         <h3>Currently unavailable</h3>
         <p>We could not load this selected CaseVerse design.</p>
@@ -28,7 +97,7 @@ function FeaturedCase({ product, reduce }) {
   const image = product.images?.[0]?.url;
   if (!image) {
     return (
-      <motion.article className="featured-case featured-case--missing" variants={reveal}>
+      <motion.article className="featured-case featured-case--missing" variants={featuredReveal}>
         <p className="featured-case__label">Featured case</p>
         <h3>{product.name}</h3>
         <p>This design is temporarily unavailable.</p>
@@ -37,28 +106,26 @@ function FeaturedCase({ product, reduce }) {
   }
 
   return (
-    <motion.article
-      className="featured-case"
-      variants={reveal}
-      whileHover={reduce ? undefined : { y: -6 }}
-      transition={motionTokens.spring.soft}
-    >
-      <Link className="featured-case__link" to={`/p/${product.slug}`} aria-label={`View ${product.name}`}>
-        <div className="featured-case__media">
-          <img src={image} alt={product.name} loading="lazy" />
-          <span className="featured-case__glint" aria-hidden="true" />
-        </div>
-        <div className="featured-case__body">
-          <p className="featured-case__label">CaseVerse / iPhone cover</p>
-          <div className="featured-case__title-row">
-            <h3>{product.name}</h3>
-            <span className="featured-case__arrow" aria-hidden="true">↗</span>
+    <motion.div className="featured-case-entry" variants={featuredReveal}>
+      <article className="featured-case" {...pointer}>
+        <Link className="featured-case__link" to={`/p/${product.slug}`} aria-label={`View ${product.name}`}>
+          <span className="featured-case__pointer-light" aria-hidden="true" />
+          <div className="featured-case__media">
+            <img src={image} alt={product.name} loading="lazy" />
+            <span className="featured-case__glint" aria-hidden="true" />
           </div>
-          <SalePrice price={product.price_from} compareAt={product.compare_at_price_from} />
-          {!product.in_stock && <span className="featured-case__oos">Currently out of stock</span>}
-        </div>
-      </Link>
-    </motion.article>
+          <div className="featured-case__body">
+            <p className="featured-case__label">CaseVerse / iPhone cover</p>
+            <div className="featured-case__title-row">
+              <h3>{product.name}</h3>
+              <span className="featured-case__arrow" aria-hidden="true">↗</span>
+            </div>
+            <SalePrice price={product.price_from} compareAt={product.compare_at_price_from} />
+            {!product.in_stock && <span className="featured-case__oos">Currently out of stock</span>}
+          </div>
+        </Link>
+      </article>
+    </motion.div>
   );
 }
 
@@ -88,6 +155,8 @@ function HeroPanel({ products }) {
 
 export default function Home() {
   const reduce = useReducedMotion();
+  const featuredPointer = usePointerMotion(reduce, 'section');
+  const featuredCtaPointer = usePointerMotion(reduce, 'cta');
   usePageMeta(
     'CaseVerse: iPhone covers',
     'A small, carefully edited selection of iPhone covers, kept in stock and shipped across Nepal.',
@@ -114,11 +183,15 @@ export default function Home() {
       <h1 className="sr-only">CaseVerse: iPhone covers, shipped across Nepal</h1>
       <section className="hero-single"><HeroPanel products={visualProducts} /></section>
       <DashainSection />
-      <section className="home-section featured-covers" aria-labelledby="featured-cases-title">
+      <section className="home-section featured-covers" aria-labelledby="featured-cases-title" {...featuredPointer}>
+        <span className="featured-covers__spotlight" aria-hidden="true" />
         <Reveal className="featured-covers__head">
           <div>
             <p className="eyebrow">FEATURED CASES</p>
-            <h2 id="featured-cases-title">Built to stand out.</h2>
+            <h2 id="featured-cases-title" className="featured-covers__headline">
+              <span className="featured-covers__headline-clip"><motion.span initial={reduce ? false : { opacity: 0, y: '105%', filter: 'blur(3px)' }} whileInView={reduce ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }} viewport={{ once: true, amount: 0.7 }} transition={{ duration: 0.54, ease: motionTokens.ease.standard }}>Built to</motion.span></span>
+              <span className="featured-covers__headline-clip"><motion.span initial={reduce ? false : { opacity: 0, y: '105%', filter: 'blur(3px)' }} whileInView={reduce ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }} viewport={{ once: true, amount: 0.7 }} transition={{ duration: 0.54, delay: 0.07, ease: motionTokens.ease.standard }}>stand out.</motion.span></span>
+            </h2>
           </div>
           <p>A small curated selection of CaseVerse designs.</p>
         </Reveal>
@@ -128,7 +201,7 @@ export default function Home() {
           </StaggerGroup>
         )}
         <motion.div className="featured-covers__footer" variants={reveal} initial={reduce ? false : 'hidden'} whileInView="visible" viewport={{ once: true, amount: 0.2 }}>
-          <Link to="/covers" className="featured-covers__cta">Explore all covers <span aria-hidden="true">→</span></Link>
+          <Link to="/covers" className="featured-covers__cta" {...featuredCtaPointer}>Explore all covers <span aria-hidden="true">→</span></Link>
         </motion.div>
       </section>
       <Suspense fallback={<div className="story-fallback" />}><ProductStory /></Suspense>
