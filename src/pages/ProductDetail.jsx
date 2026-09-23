@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useAsync from '../hooks/useAsync';
 import { catalog, reviews as reviewsApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
@@ -38,6 +38,16 @@ function VariantPicker({ variants, value, onChange }) {
     return init;
   });
 
+  // Keep the visible selection aligned with the PDP's auto-selected variant,
+  // including the first in-stock option for a newly loaded product.
+  useEffect(() => {
+    const next = {};
+    (value?.attributes || variants[0]?.attributes || []).forEach((a) => {
+      next[a.name] = a.value;
+    });
+    setSelection(next);
+  }, [value?.id, variants]);
+
   const pick = (name, val) => {
     const next = { ...selection, [name]: val };
     setSelection(next);
@@ -47,27 +57,21 @@ function VariantPicker({ variants, value, onChange }) {
 
   return (
     <div className="stack">
-      {attrNames.map((name) => {
+      {attrNames.map((name, index) => {
         const options = [
           ...new Set(variants.flatMap((v) => v.attributes.filter((a) => a.name === name).map((a) => a.value))),
         ];
-        // A single value across all variants isn't a choice; state it plainly.
-        if (options.length <= 1) {
-          return (
-            <div key={name} className="opt-group">
-              <span className="opt-label" style={{ display: 'inline' }}>{name}: </span>
-              <span>{options[0] || 'One option'}</span>
-            </div>
-          );
-        }
+        const labelId = `variant-attribute-${index}`;
         return (
-          <div key={name} className="opt-group">
-            <div className="opt-label">{name}</div>
-            <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <div key={name} className="opt-group" aria-labelledby={labelId}>
+            <div id={labelId} className="opt-label">{name}</div>
+            <div className="row" role="group" aria-labelledby={labelId} style={{ flexWrap: 'wrap', gap: 8 }}>
               {options.map((opt) => (
                 <button
+                  type="button"
                   key={opt}
                   className={`opt-chip ${selection[name] === opt ? 'active' : ''}`}
+                  aria-pressed={selection[name] === opt}
                   onClick={() => pick(name, opt)}
                 >
                   {opt}
@@ -288,6 +292,12 @@ export default function ProductDetail() {
   const [addError, setAddError] = useState(null);
   const [added, setAdded] = useState(false);
 
+  useEffect(() => {
+    setVariant(null);
+    setQty(1);
+    setImgIdx(0);
+  }, [slug]);
+
   const active = variant || product?.variants?.find((v) => v.in_stock) || product?.variants?.[0];
 
   if (loading) return <Spinner />;
@@ -330,6 +340,9 @@ export default function ProductDetail() {
   };
 
   const backTo = product.category ? categoryPath(product.category.slug) : '/shop';
+  const hasPhoneModel = product.variants?.some((v) =>
+    v.attributes?.some((attribute) => attribute.name === 'Phone Model' && attribute.value)
+  );
 
   return (
     <div>
@@ -381,8 +394,10 @@ export default function ProductDetail() {
 
           <p style={{ maxWidth: '46ch', color: 'var(--ink-soft)' }}>{product.description}</p>
 
-          {product.variants?.length > 1 && (
+          {hasPhoneModel ? (
             <VariantPicker variants={product.variants} value={active} onChange={(v) => { setVariant(v); setImgIdx(0); }} />
+          ) : (
+            <p className="alert" role="status">Phone model compatibility is unavailable for this cover.</p>
           )}
 
           <div className="row" style={{ alignItems: 'center', gap: 14 }}>
