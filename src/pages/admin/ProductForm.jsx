@@ -241,6 +241,11 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
           <input type="number" min="0" required value={row.stock_quantity}
             onChange={(e) => setRow({ ...row, stock_quantity: e.target.value })} />
         </label>
+        {variant.reserved_quantity != null && (
+          <p className="small muted" style={{ flex: '1 1 100%', margin: 0 }} data-testid="variant-inventory">
+            Physical {variant.stock_quantity}, reserved by unpaid orders {variant.reserved_quantity}, available {variant.available_quantity}
+          </p>
+        )}
         {attrDefs.map((d) => (
           <label className="field" key={d.id} style={{ flex: '1 1 130px', marginBottom: 0 }}>
             <span className="small muted">{d.name}</span>
