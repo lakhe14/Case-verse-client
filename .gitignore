@@ -22,3 +22,6 @@ temp/
 playwright-report/
 test-results/
 blob-report/
+playwright/.auth/
+tests/e2e/.auth/
+*.storage-state.json

@@ -1,25 +1,5 @@
 import { expect, test } from '@playwright/test';
-
-const essentialFailures = (page) => {
-  const failures = [];
-  page.on('pageerror', (error) => failures.push(`pageerror: ${error.message}`));
-  page.on('console', (message) => {
-    // Google Fonts is cosmetic and intentionally blocked in the restricted
-    // local browser environment. Local API/image failures still fail below.
-    if (message.type() === 'error' && !message.text().includes('net::ERR_NETWORK_ACCESS_DENIED')) failures.push(`console: ${message.text()}`);
-  });
-  page.on('response', (response) => {
-    const url = response.url();
-    if (response.status() >= 400 && (url.includes('/api/') || url.includes('/assets/'))) failures.push(`HTTP ${response.status()}: ${url}`);
-  });
-  page.on('requestfailed', (request) => {
-    const url = request.url();
-    if (url.startsWith('http://localhost:5173/') || url.startsWith('http://127.0.0.1:4002/')) {
-      failures.push(`network: ${request.failure()?.errorText || 'request failed'}: ${url}`);
-    }
-  });
-  return failures;
-};
+import { essentialFailures } from './helpers/monitor.js';
 
 async function expectNoHorizontalOverflow(page) {
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
