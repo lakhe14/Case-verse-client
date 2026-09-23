@@ -12,6 +12,55 @@ import { Reveal, StaggerGroup } from '../motion/MotionPrimitives';
 import { motionTokens, reveal } from '../motion/motionConfig';
 
 const ProductStory = lazy(() => import('../components/ProductStory'));
+const FEATURED_SLUGS = ['pink-floral', 'bow-cherry-iconic', 'chetah-iconic'];
+
+function FeaturedCase({ product, reduce }) {
+  if (!product) {
+    return (
+      <motion.article className="featured-case featured-case--missing" variants={reveal}>
+        <p className="featured-case__label">Featured case</p>
+        <h3>Currently unavailable</h3>
+        <p>We could not load this selected CaseVerse design.</p>
+      </motion.article>
+    );
+  }
+
+  const image = product.images?.[0]?.url;
+  if (!image) {
+    return (
+      <motion.article className="featured-case featured-case--missing" variants={reveal}>
+        <p className="featured-case__label">Featured case</p>
+        <h3>{product.name}</h3>
+        <p>This design is temporarily unavailable.</p>
+      </motion.article>
+    );
+  }
+
+  return (
+    <motion.article
+      className="featured-case"
+      variants={reveal}
+      whileHover={reduce ? undefined : { y: -6 }}
+      transition={motionTokens.spring.soft}
+    >
+      <Link className="featured-case__link" to={`/p/${product.slug}`} aria-label={`View ${product.name}`}>
+        <div className="featured-case__media">
+          <img src={image} alt={product.name} loading="lazy" />
+          <span className="featured-case__glint" aria-hidden="true" />
+        </div>
+        <div className="featured-case__body">
+          <p className="featured-case__label">CaseVerse / iPhone cover</p>
+          <div className="featured-case__title-row">
+            <h3>{product.name}</h3>
+            <span className="featured-case__arrow" aria-hidden="true">↗</span>
+          </div>
+          <SalePrice price={product.price_from} compareAt={product.compare_at_price_from} />
+          {!product.in_stock && <span className="featured-case__oos">Currently out of stock</span>}
+        </div>
+      </Link>
+    </motion.article>
+  );
+}
 
 function HeroPanel({ products }) {
   const reduce = useReducedMotion();
@@ -38,6 +87,7 @@ function HeroPanel({ products }) {
 }
 
 export default function Home() {
+  const reduce = useReducedMotion();
   usePageMeta(
     'CaseVerse: iPhone covers',
     'A small, carefully edited selection of iPhone covers, kept in stock and shipped across Nepal.',
@@ -45,17 +95,42 @@ export default function Home() {
   );
   const covers = useAsync(() => catalog.products({ category: 'iphone-covers', limit: 1 }), []);
   const best = useAsync(() => catalog.bestsellers({ limit: 8 }), []);
+  const featured = useAsync(
+    () => Promise.all(FEATURED_SLUGS.map(async (slug) => {
+      try {
+        return (await catalog.product(slug)).data;
+      } catch {
+        return null;
+      }
+    })),
+    []
+  );
   const products = best.data?.data || [];
   const heroProduct = covers.data?.data?.[0];
   const visualProducts = useMemo(() => [heroProduct, ...products].filter((p, i, all) => p?.images?.[0]?.url && all.findIndex((v) => v.id === p.id) === i), [heroProduct, products]);
-  const editorial = useMemo(() => products.filter((p) => p.images?.[0]?.url).slice(0, 3), [products]);
 
   return (
     <div className="home-art full-bleed">
       <h1 className="sr-only">CaseVerse: iPhone covers, shipped across Nepal</h1>
       <section className="hero-single"><HeroPanel products={visualProducts} /></section>
       <DashainSection />
-      <section className="home-section featured-covers"><Reveal><p className="eyebrow">THE COLLECTION</p><h2>Built around<br />your iPhone.</h2></Reveal><div className="editorial-grid">{editorial.map((product, i) => <Link className={`editorial-card editorial-card--${i}`} key={product.id} to={`/p/${product.slug}`}><img src={product.images[0].url} alt={product.name} loading="lazy" /><span>{i === 0 ? 'Featured cover' : 'New arrival'}</span><strong>{product.name}</strong><em><SalePrice price={product.price_from} compareAt={product.compare_at_price_from} compact /></em></Link>)}</div></section>
+      <section className="home-section featured-covers" aria-labelledby="featured-cases-title">
+        <Reveal className="featured-covers__head">
+          <div>
+            <p className="eyebrow">FEATURED CASES</p>
+            <h2 id="featured-cases-title">Built to stand out.</h2>
+          </div>
+          <p>A small curated selection of CaseVerse designs.</p>
+        </Reveal>
+        {featured.loading ? <Spinner /> : (
+          <StaggerGroup className="featured-cases-grid">
+            {FEATURED_SLUGS.map((slug, index) => <FeaturedCase key={slug} product={featured.data?.[index]} reduce={reduce} />)}
+          </StaggerGroup>
+        )}
+        <motion.div className="featured-covers__footer" variants={reveal} initial={reduce ? false : 'hidden'} whileInView="visible" viewport={{ once: true, amount: 0.2 }}>
+          <Link to="/covers" className="featured-covers__cta">Explore all covers <span aria-hidden="true">→</span></Link>
+        </motion.div>
+      </section>
       <Suspense fallback={<div className="story-fallback" />}><ProductStory /></Suspense>
       <section className="home-section why-section"><Reveal className="line-reveal"><p className="eyebrow">WHY CASEVERSE</p><h2><span>Less noise.</span><span>More considered.</span></h2></Reveal><StaggerGroup className="feature-columns">{[['01','Exact model match','Choose the phone model that fits your device, directly from real available stock.'],['02','Selected, not crowded','A focused edit of styles for the iPhone you use every day.'],['03','Across Nepal','Protection and personality, delivered where you are.']].map(([number,title,copy]) => <motion.article variants={reveal} key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></motion.article>)}</StaggerGroup></section>
       <section className="home-section bestsellers"><Reveal className="section-head dark-head"><div><p className="eyebrow">MOST WANTED</p><h2>Chosen often.<br />Kept close.</h2></div><Link to="/shop" className="see-all">View collection →</Link></Reveal>{best.loading ? <Spinner /> : <StaggerGroup className="grid dark-grid">{products.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</StaggerGroup>}</section>
