@@ -33,6 +33,7 @@ export default function Checkout() {
   const [destinations, setDestinations] = useState([]);
   const [destinationId, setDestinationId] = useState('');
   const [destinationError, setDestinationError] = useState(null);
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
   const quoteRequest = useRef(0);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function Checkout() {
     if (!isCustomer || !shippingId || !destinationId) {
       quoteRequest.current += 1;
       setPreview(null);
+      setPreviewError(null);
       return;
     }
     const requestId = ++quoteRequest.current;
@@ -78,7 +80,7 @@ export default function Checkout() {
       .catch((e) => {
         if (quoteRequest.current === requestId) { setPreviewError(e); setPreview(null); }
       });
-  }, [shippingId, destinationId, appliedCoupon, redeemPoints]);
+  }, [shippingId, destinationId, appliedCoupon, redeemPoints, quoteAttempt]);
   // preview response is { data } shaped? endpoint returns r.data => the JSON body { data }
   // orderApi.preview returns response.data (the body). body = { data: {...} }
 
@@ -268,7 +270,16 @@ export default function Checkout() {
         <div className="summary-box checkout-summary" style={{ flex: '1 1 300px' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 500, marginTop: 0 }}>Order total</h3>
           {!totals ? (
-            <Spinner />
+            previewError ? (
+              <div>
+                <ErrorText error={previewError} />
+                <button type="button" className="btn subtle sm" onClick={() => setQuoteAttempt((n) => n + 1)}>Try again</button>
+              </div>
+            ) : !destinationId ? (
+              <p className="muted small">Select a ParcelMoover delivery destination to see shipping and your total.</p>
+            ) : (
+              <Spinner />
+            )
           ) : (
             <div>
               {totals.campaign_active && totals.bundle_discount > 0 && (
