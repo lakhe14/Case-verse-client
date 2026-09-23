@@ -66,9 +66,11 @@ test.describe('guest checkout', () => {
     // Order creation is intercepted: the request never reaches the server.
     let placeRequests = 0;
     let sentGuest = null;
+    let sentKey = null;
     await page.route('**/api/guest-checkout/orders', async (route) => {
       placeRequests += 1;
       sentGuest = route.request().postDataJSON().guest;
+      sentKey = route.request().headers()['idempotency-key'];
       await delay(800);
       await json(route, { data: { id: 990001, order_number: 'QA-E2E-0001' }, guest_token: SYNTHETIC_GUEST_TOKEN }, 201);
     });
@@ -84,6 +86,7 @@ test.describe('guest checkout', () => {
     expect(placeRequests).toBe(1);
     expect(sentGuest).toMatchObject({ name: 'QA Guest', phone: '9800000000', province: 'Bagmati', district: 'Kathmandu', municipality: 'Kathmandu', area: 'QA test street', landmark: 'QA landmark' });
     expect(sentGuest.parcelmoover_destination_id).toBeTruthy();
+    expect(sentKey).toMatch(/^[A-Za-z0-9_-]{36,128}$/);
 
     await expect(page.getByRole('heading', { name: 'QA-E2E-0001' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Confirm your order' })).toBeVisible();

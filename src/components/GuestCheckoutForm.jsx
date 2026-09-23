@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner, ErrorText, Money } from './ui';
 import SalePrice from './SalePrice';
+import { newIdempotencyKey } from '../utils/idempotencyKey';
 
 const EMPTY_GUEST = {
   name: '', phone: '', province: '', district: '', municipality: '', area: '', landmark: '', notes: '', parcelmoover_destination_id: '', parcelmoover_destination_name: '',
@@ -63,6 +64,10 @@ export default function GuestCheckoutForm() {
   const [destinations, setDestinations] = useState([]);
   const [destinationsError, setDestinationsError] = useState(null);
   const quoteRequest = useRef(0);
+  // One Idempotency-Key per submission: double clicks, Enter and network
+  // retries of the same payload reuse it; a changed payload gets a new one.
+  const submission = useRef(null);
+  const inFlight = useRef(false);
 
   const setField = (field) => (e) => setGuest((g) => ({ ...g, [field]: e.target.value }));
 
@@ -90,25 +95,46 @@ export default function GuestCheckoutForm() {
 
   const placeOrder = async (e) => {
     e.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setPlacing(true);
     setPlaceError(null);
+    const body = {
+      items: cart.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })),
+      guest: {
+        ...guest,
+        latitude: geo.coords?.latitude,
+        longitude: geo.coords?.longitude,
+      },
+    };
+    const signature = JSON.stringify(body);
+    if (!submission.current || submission.current.signature !== signature) {
+      submission.current = { key: newIdempotencyKey(), signature };
+    }
+    const { key } = submission.current;
     try {
-      const items = cart.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity }));
-      const res = await guestCheckout.place({
-        items,
-        guest: {
-          ...guest,
-          latitude: geo.coords?.latitude,
-          longitude: geo.coords?.longitude,
-        },
-      });
+      let res;
+      try {
+        res = await guestCheckout.place(body, key);
+      } catch (err) {
+        // No response at all (dropped connection, timeout): the order may have
+        // been created. Retry once with the SAME key; the server replays it.
+        if (err.status) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        res = await guestCheckout.place(body, key);
+      }
+      submission.current = null;
       await clear();
       toast.success(`Order ${res.data.order_number} placed. Thank you!`);
       navigate(`/order/guest/${res.guest_token}`, { replace: true });
     } catch (err) {
+      // A reused key means this attempt no longer matches the original one; the
+      // next attempt starts a fresh submission.
+      if (err.code === 'idempotency_key_reused') submission.current = null;
       setPlaceError(err);
       toast.error(err.message || 'We couldn’t place your order. Please try again.');
     } finally {
+      inFlight.current = false;
       setPlacing(false);
     }
   };

@@ -64,7 +64,8 @@ export const orders = {
 
 export const guestCheckout = {
   preview: (body) => post('/guest-checkout/preview', body),
-  place: (body) => post('/guest-checkout/orders', body),
+  // Only guest order creation carries an Idempotency-Key; reuse it for retries of the same submission.
+  place: (body, idempotencyKey) => post('/guest-checkout/orders', body, { headers: { 'Idempotency-Key': idempotencyKey } }),
   get: (token) => get(`/guest-checkout/orders/${token}`),
   cancel: (token) => post(`/guest-checkout/orders/${token}/cancel`),
   uploadPaymentProof: (token, formData) =>

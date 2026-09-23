@@ -4,6 +4,7 @@
  * (an order owned by customer A, and a tagged guest order whose raw token is
  * kept only in this process's memory/env for the workers; never printed).
  */
+import crypto from 'node:crypto';
 import { request as playwrightRequest } from '@playwright/test';
 
 export default async function globalSetup() {
@@ -27,6 +28,7 @@ export default async function globalSetup() {
     if (order.status() !== 201) throw new Error(`Seeding customer A order failed (${order.status()})`);
 
     const guest = await context.post(`${api}/guest-checkout/orders`, {
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
       data: {
         items: [{ variant_id: variantId, quantity: 1 }],
         guest: { name: `E2E seed ${process.env.E2E_RUN_ID}`, phone: '9800000010', province: 'Bagmati', district: 'Kathmandu', municipality: 'Kathmandu', area: 'E2E seed lane', notes: `${process.env.E2E_RUN_ID} seed`, parcelmoover_destination_id: 'e2e-kathmandu' },

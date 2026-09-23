@@ -3,6 +3,7 @@
  * against the isolated E2E API (caseverse_e2e); every order created here is
  * E2E-owned and removed by global teardown. Representative viewports only.
  */
+import crypto from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { addToCartFromPdp } from '../helpers/catalog.js';
 import { essentialFailures } from '../helpers/monitor.js';
@@ -37,6 +38,7 @@ async function apiCustomerOrder(request, kind, slug) {
 /** Real guest order through the API. The token is returned to the caller only. */
 async function apiGuestOrder(request, label) {
   const response = await request.post(`${API}/guest-checkout/orders`, {
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
     data: {
       items: [{ variant_id: await variantId(request, 'pink-love-bow'), quantity: 1 }],
       guest: { name: `E2E ${label}`, phone: '9800000011', province: 'Bagmati', district: 'Kathmandu', municipality: 'Kathmandu', area: 'E2E lane', notes: `${RUN_ID} ${label}`, parcelmoover_destination_id: 'e2e-kathmandu' },
