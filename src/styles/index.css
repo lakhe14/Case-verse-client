@@ -490,7 +490,7 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
   .container { padding: 0 18px; }
   .site-footer .container { padding-top: 32px; padding-bottom: 40px; }
 
-  .storefront .page { padding-top: 24px; padding-bottom: 48px; }
+  .storefront .page { padding-bottom: 48px; }
   .storefront h1 { font-size: clamp(1.5rem, 6.5vw, 1.95rem); }
   .storefront h2 { font-size: clamp(1.3rem, 5vw, 1.7rem); }
 
@@ -767,7 +767,7 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 
 /* Mobile-first storefront refinement: keep message and purchase controls ahead of decoration. */
 @media (max-width:700px){
-  .storefront .page:not(.page--home){padding-top:26px;padding-bottom:44px}
+  .storefront .page:not(.page--home){padding-bottom:44px}
   .storefront .page h1{line-height:1.04}
   .storefront .page .card,.storefront .page .summary-box{padding:18px;border-radius:10px}
   .storefront .page input:not([type=checkbox]):not([type=radio]),.storefront .page select,.storefront .page textarea{min-height:48px;font-size:16px}
