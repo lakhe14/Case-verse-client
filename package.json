@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:full": "playwright test -c playwright.full.config.js"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

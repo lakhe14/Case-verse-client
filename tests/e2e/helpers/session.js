@@ -29,7 +29,7 @@ export function credentials(kind) {
 /** Skip reason when any of the accounts is missing, otherwise null. */
 export function notConfigured(...kinds) {
   const missing = kinds.filter((kind) => !credentials(kind)).map((kind) => `${ACCOUNTS[kind].prefix}_EMAIL/_PASSWORD`);
-  return missing.length ? `NOT CONFIGURED: set ${missing.join(', ')} for a dedicated local QA account` : null;
+  return missing.length ? `NOT CONFIGURED: set ${missing.join(', ')} for a dedicated local QA account, or run npm run test:e2e:full (isolated E2E fixtures)` : null;
 }
 
 // Per-worker cache keeps logins well inside the server's 20-per-15-minutes limiter.

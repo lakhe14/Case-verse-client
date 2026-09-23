@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // Transactional flows need the isolated E2E database: npm run test:e2e:full.
+  testIgnore: ['**/full/**'],
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,

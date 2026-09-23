@@ -48,8 +48,9 @@ test.describe('guest checkout', () => {
       await expect(page.getByRole('button', { name: 'Place order & continue to payment' })).toBeEnabled();
       await expectNoHorizontalOverflow(page);
       expect(failures).toEqual([]);
-      // Stops before submission: guest orders are real stock reservations and
-      // there is no disposable-order cleanup path. See the mocked test below.
+      // Stops before submission: this suite also runs against the dev API.
+      // Real guest orders run only in the isolated E2E environment
+      // (full/transactions.spec.js); the mocked test below covers the UI lock.
     });
   }
 
@@ -115,7 +116,7 @@ test.describe('guest token isolation', () => {
 
   test('a real QA guest token opens its own order', async ({ request }) => {
     const token = process.env.E2E_GUEST_ORDER_TOKEN;
-    test.skip(!token, 'NOT CONFIGURED: set E2E_GUEST_ORDER_TOKEN to a disposable QA guest order token');
+    test.skip(!token, 'NOT CONFIGURED: set E2E_GUEST_ORDER_TOKEN, or run npm run test:e2e:full which seeds one');
     const response = await request.get(`${API}/guest-checkout/orders/${token}`);
     // Status only: the token and the order body are never printed.
     expect(response.status(), 'QA guest token lookup').toBe(200);

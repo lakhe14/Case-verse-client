@@ -45,7 +45,8 @@ test.describe('authenticated checkout', () => {
       await expect(page.locator('.checkout-payment-note')).toContainText(/100\.00 eSewa advance/);
       await expect(placeOrder).toBeEnabled();
       await expectNoHorizontalOverflow(page);
-      // Stops here: no disposable-order cleanup exists, so a real order is never placed.
+      // Stops here: this suite also runs against the dev API. Real placement runs
+      // only in the isolated E2E environment (full/transactions.spec.js).
 
       await uiLogout(page);
       expect(failures).toEqual([]);

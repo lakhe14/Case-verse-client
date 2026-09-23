@@ -6,7 +6,11 @@
  *
  * allow: [{ url: RegExp, status?: number | number[], network?: boolean }]
  */
-const LOCAL_ORIGINS = ['http://localhost:5173/', 'http://127.0.0.1:4002/'];
+const origin = (url) => `${new URL(url).origin}/`;
+// Default run: the dev app (5173) and dev API (4002). Full isolated run: the
+// E2E app and API, and any request to the dev API is itself a failure.
+const LOCAL_ORIGINS = [origin(process.env.E2E_BASE_URL || 'http://localhost:5173'), origin(process.env.E2E_API_ORIGIN || 'http://127.0.0.1:4002')];
+const FORBIDDEN_ORIGINS = process.env.E2E_FULL ? ['http://127.0.0.1:4002/', 'http://localhost:4002/', 'http://localhost:5173/'] : [];
 
 function isAllowed(allow, url, { status, network = false }) {
   return allow.some((rule) => {
@@ -19,6 +23,9 @@ function isAllowed(allow, url, { status, network = false }) {
 
 export function essentialFailures(page, { allow = [] } = {}) {
   const failures = [];
+  page.on('request', (request) => {
+    if (FORBIDDEN_ORIGINS.some((forbidden) => request.url().startsWith(forbidden))) failures.push(`dev environment contacted during isolated run: ${origin(request.url())}`);
+  });
   page.on('pageerror', (error) => failures.push(`pageerror: ${error.message}`));
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
