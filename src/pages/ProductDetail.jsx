@@ -11,6 +11,7 @@ import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence, motion } from 'motion/react';
 import { MotionButton, StaggerGroup } from '../motion/MotionPrimitives';
 import SalePrice from '../components/SalePrice';
+import { mediaUrl } from '../utils/mediaUrl';
 
 /** Trim a product description into a ~155-char meta description. */
 function metaFromProduct(product) {
@@ -358,7 +359,7 @@ export default function ProductDetail() {
               <motion.img
                 key={hero.url}
                 className="pdp-hero-img"
-                src={hero.url}
+                src={mediaUrl(hero.url)}
                 alt={product.name}
                 decoding="async"
                 initial={{ opacity: 0, scale: 1.015 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}
@@ -376,7 +377,7 @@ export default function ProductDetail() {
                   onClick={() => setImgIdx(i)}
                   aria-label={`Image ${i + 1}`}
                 >
-                  {g.url ? <img src={g.url} alt="" loading="lazy" decoding="async" /> : null}
+                  {g.url ? <img src={mediaUrl(g.url)} alt="" loading="lazy" decoding="async" /> : null}
                 </button>
               ))}
             </div>

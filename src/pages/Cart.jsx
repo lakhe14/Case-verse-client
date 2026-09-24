@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { MotionButton } from '../motion/MotionPrimitives';
 import SalePrice from '../components/SalePrice';
 import { useCampaign } from '../hooks/useCampaign';
+import { mediaUrl } from '../utils/mediaUrl';
 
 const BLANK_IMG =
   'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
@@ -54,7 +55,7 @@ export default function Cart() {
           <AnimatePresence initial={false}>
           {cart.items.map((item) => (
             <motion.div key={item.id} className="cart-line" layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }} transition={{ duration: 0.2 }}>
-              <img className="cart-thumb" src={item.product?.image || BLANK_IMG} alt="" loading="lazy" decoding="async" />
+              <img className="cart-thumb" src={mediaUrl(item.product?.image) || BLANK_IMG} alt="" loading="lazy" decoding="async" />
               <div style={{ flex: 1 }}>
                 <Link to={`/p/${item.product?.slug}`} style={{ fontWeight: 500 }}>
                   {item.product?.name}

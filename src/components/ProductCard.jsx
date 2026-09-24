@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { motion, useReducedMotion } from 'motion/react';
 import { reveal, motionTokens } from '../motion/motionConfig';
 import SalePrice from './SalePrice';
+import { mediaUrl } from '../utils/mediaUrl';
 
 function HeartIcon({ filled }) {
   return (
@@ -29,7 +30,7 @@ export default function ProductCard({ product, onWishlistChange }) {
   const toast = useToast();
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
-  const img = product.images?.[0]?.url;
+  const img = mediaUrl(product.images?.[0]?.url);
   const reduce = useReducedMotion();
 
   const toggleSave = async () => {

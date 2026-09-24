@@ -10,6 +10,7 @@ import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Reveal, StaggerGroup } from '../motion/MotionPrimitives';
 import { motionTokens, reveal } from '../motion/motionConfig';
+import { mediaUrl } from '../utils/mediaUrl';
 
 const ProductStory = lazy(() => import('../components/ProductStory'));
 const FEATURED_SLUGS = ['pink-floral', 'bow-cherry-iconic', 'chetah-iconic'];
@@ -94,7 +95,7 @@ function FeaturedCase({ product, reduce }) {
     );
   }
 
-  const image = product.images?.[0]?.url;
+  const image = mediaUrl(product.images?.[0]?.url);
   if (!image) {
     return (
       <motion.article className="featured-case featured-case--missing" variants={featuredReveal}>
@@ -140,7 +141,7 @@ function HeroPanel({ products }) {
       <Link to="/covers" className="hero-link" aria-label="Shop phone covers">
         <div className="hero-aurora" aria-hidden="true" />
         <div className="hero-fog hero-fog--one" aria-hidden="true" /><div className="hero-fog hero-fog--two" aria-hidden="true" />
-        <motion.div className="hero-product-depth" initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}><picture><source srcSet="/assets/caseverse/case-rotation.webp" type="image/webp" /><img className="hero-product" src={product?.images?.[0]?.url || '/assets/caseverse/story/precision-fit.jpeg'} alt="Animated CaseVerse phone cover" loading="eager" fetchpriority="high" decoding="async" /></picture></motion.div>
+        <motion.div className="hero-product-depth" initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}><picture><source srcSet="/assets/caseverse/case-rotation.webp" type="image/webp" /><img className="hero-product" src={mediaUrl(product?.images?.[0]?.url) || '/assets/caseverse/story/precision-fit.jpeg'} alt="Animated CaseVerse phone cover" loading="eager" fetchpriority="high" decoding="async" /></picture></motion.div>
         <motion.div className="hp-inner" initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.09, delayChildren: 0.08 } } }}>
           <motion.p variants={reveal} className="hero-eyebrow">CASEVERSE / IPHONE COVERS</motion.p>
           <motion.h2 variants={reveal}>Designed to protect.<br />Built to be noticed.</motion.h2>

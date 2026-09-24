@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { admin } from '../../api/endpoints';
 import { Spinner, ErrorText } from '../../components/ui';
+import { mediaUrl } from '../../utils/mediaUrl';
 
 const BLANK = { name: '', category_id: '', base_price: '', description: '', status: 'active' };
 
@@ -414,7 +415,7 @@ function Images({ product, onChange }) {
       <div className="row" style={{ flexWrap: 'wrap' }}>
         {product.images.map((img) => (
           <div key={img.id} style={{ position: 'relative' }}>
-            <img src={img.url} alt="" style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 8 }} />
+            <img src={mediaUrl(img.url)} alt="" style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 8 }} />
             <button
               className="btn danger sm"
               style={{ position: 'absolute', top: 2, right: 2, padding: '0 6px' }}

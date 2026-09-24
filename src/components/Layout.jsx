@@ -11,6 +11,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { PageTransition } from '../motion/MotionPrimitives';
 import { motionTokens } from '../motion/motionConfig';
 import { useNavScroll } from '../hooks/useNavScroll';
+import { mediaUrl } from '../utils/mediaUrl';
 
 const BLANK_IMG =
   'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
@@ -265,7 +266,7 @@ function MiniCartDrawer({ open, onClose, returnFocusRef }) {
         <div className="minicart-body">
           {items.map((item) => (
             <div className="minicart-line" key={item.id}>
-              <img className="minicart-thumb" src={item.product?.image || BLANK_IMG} alt="" loading="lazy" />
+              <img className="minicart-thumb" src={mediaUrl(item.product?.image) || BLANK_IMG} alt="" loading="lazy" />
               <div className="minicart-line-main">
                 <Link to={`/p/${item.product?.slug}`} className="minicart-line-name" onClick={onClose}>
                   {item.product?.name}
