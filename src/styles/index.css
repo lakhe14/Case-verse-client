@@ -800,3 +800,4 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 
 /* Admin variant inventory: physical, reserved, available. */
 .admin-shell .inv-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 10px}.admin-shell .inv-stats>div{min-width:0;padding:8px 10px;background:var(--admin-surface-2);border:1px solid var(--admin-border);border-radius:8px}.admin-shell .inv-stats dt{font-size:.7rem;font-weight:600;color:var(--admin-muted)}.admin-shell .inv-stats dd{margin:2px 0 0;font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--admin-text)}.admin-shell .inv-warning{margin:0 0 10px;font-size:.8rem;line-height:1.45;color:var(--admin-warning);overflow-wrap:anywhere}.admin-shell input[type=number]:invalid{border-color:var(--admin-danger)}
+.admin-shell .badge.overdue{margin-left:6px;background:rgba(245,195,106,.13);color:var(--admin-warning);white-space:nowrap}

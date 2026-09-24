@@ -92,6 +92,7 @@ export default function PaymentConfirmation({ order, onUpdated, guestToken }) {
     <div className="spread payment-confirmation__head"><div><p className="eyebrow">ORDER CONFIRMATION</p><h3 id="payment-title">Confirm your order</h3></div><StatusBadge status={payment.status} label={labels[payment.status]} /></div>
     {completed ? <p className="payment-confirmation__message">Your payment confirmation has been verified. Your order is now being prepared.</p> : <>
       <p className="payment-confirmation__message">To confirm order <strong>{order.order_number}</strong>, pay <strong>{hasAdvanceAmount ? `NPR ${parsedAdvance.toFixed(0)}` : 'Advance amount unavailable'}</strong> in advance with eSewa and upload your payment screenshot.</p>
+      {payment.status === 'proof_uploaded' && <p className="alert ok" data-testid="proof-waiting">Payment proof received. Waiting for staff verification.</p>}
       {payment.status === 'rejected' && <p className="alert error">Proof rejected{payment.admin_note ? `: ${payment.admin_note}` : '. Please upload a new screenshot.'}</p>}
       <div className="payment-confirmation__layout">
         <div className="payment-confirmation__pay">
