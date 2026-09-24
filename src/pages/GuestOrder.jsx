@@ -49,7 +49,7 @@ export default function GuestOrder() {
 
       {o.paymentConfirmation && <PaymentConfirmation order={o} guestToken={token} onUpdated={reload} />}
 
-      {o.status === 'cancelled' && <div className="alert ok">This order was cancelled. <Link to="/covers">Shop other covers</Link>.</div>}
+      {o.status === 'cancelled' && <div className="alert ok" data-testid="order-cancelled">{o.cancellation_reason === 'payment_timeout' ? 'This order was cancelled because payment was not confirmed in time.' : 'This order was cancelled.'} <Link to="/covers">Shop other covers</Link>.</div>}
 
       <div className="row order-detail-grid" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div className="card order-detail-items" style={{ flex: '1 1 340px' }}>

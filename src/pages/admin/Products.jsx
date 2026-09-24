@@ -12,10 +12,17 @@ export default function AdminProducts() {
     [page, q]
   );
 
+  const [deleteError, setDeleteError] = useState(null);
+
   const del = async (id) => {
     if (!confirm('Delete this product and all its variants?')) return;
-    await admin.deleteProduct(id);
-    reload();
+    setDeleteError(null);
+    try {
+      await admin.deleteProduct(id);
+      reload();
+    } catch (e) {
+      setDeleteError(e);
+    }
   };
 
   return (
@@ -31,6 +38,13 @@ export default function AdminProducts() {
         style={{ maxWidth: 280 }}
       />
       <ErrorText error={error} />
+      {deleteError?.code === 'product_in_use' ? (
+        <div className="alert error" role="alert" data-testid="delete-conflict">
+          This product has order history and cannot be deleted. Deactivate it instead: open it and set Status to inactive.
+        </div>
+      ) : (
+        <ErrorText error={deleteError} />
+      )}
       {loading ? (
         <Spinner />
       ) : (

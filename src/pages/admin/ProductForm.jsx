@@ -220,8 +220,13 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
 
   const del = async () => {
     if (!confirm(`Delete variant ${variant.sku}?`)) return;
-    await admin.deleteVariant(product.id, variant.id);
-    onChange();
+    setErr(null);
+    try {
+      await admin.deleteVariant(product.id, variant.id);
+      onChange();
+    } catch (e) {
+      setErr(e);
+    }
   };
 
   // Admin shape: stock_quantity is physical; reserved/available come with it.
@@ -233,6 +238,10 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
       {floorError ? (
         <div className="alert error" role="alert" data-testid="stock-floor-error">
           Stock cannot be set below {floorError.minimum_allowed_stock}. That many units are now reserved by pending orders.
+        </div>
+      ) : err?.code === 'variant_in_use' ? (
+        <div className="alert error" role="alert" data-testid="delete-conflict">
+          This variant has order history and cannot be deleted. Deactivate it instead: untick Active and save.
         </div>
       ) : (
         <ErrorText error={err} />

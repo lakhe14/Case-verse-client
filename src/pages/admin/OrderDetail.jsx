@@ -13,6 +13,14 @@ const NEXT = {
   cancelled: [],
 };
 
+// orders.cancellation_reason; orders cancelled before it was recorded show nothing.
+const CANCELLED_BY = {
+  customer: 'Cancelled by the customer.',
+  guest: 'Cancelled by the guest customer.',
+  staff: 'Cancelled by staff.',
+  payment_timeout: 'Cancelled automatically: payment was not confirmed before the reserved stock expired.',
+};
+
 export default function AdminOrderDetail() {
   const { id } = useParams();
   const { data, loading, error, reload } = useAsync(() => admin.order(id), [id]);
@@ -69,6 +77,9 @@ export default function AdminOrderDetail() {
         {o.user ? `${o.user.name}, ${o.user.email}` : `${o.guest_name} (guest), ${o.guest_phone}`}
       </div>
       <div className="muted small">Placed {new Date(o.placed_at).toLocaleString()}</div>
+      {o.status === 'cancelled' && CANCELLED_BY[o.cancellation_reason] && (
+        <div className="muted small" data-testid="cancellation-reason">{CANCELLED_BY[o.cancellation_reason]}</div>
+      )}
 
       <div className="card">
         <h3>Delivery</h3>

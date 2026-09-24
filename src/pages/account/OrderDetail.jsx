@@ -70,7 +70,7 @@ export default function OrderDetail() {
 
       {o.paymentConfirmation && <PaymentConfirmation order={o} onUpdated={reload} />}
 
-      {o.status === 'cancelled' && <div className="alert ok">This order was cancelled. <Link to="/covers">Shop other covers</Link> or <Link to="/account/orders">view your orders</Link>.</div>}
+      {o.status === 'cancelled' && <div className="alert ok" data-testid="order-cancelled">{o.cancellation_reason === 'payment_timeout' ? 'This order was cancelled because payment was not confirmed in time.' : 'This order was cancelled.'} <Link to="/covers">Shop other covers</Link> or <Link to="/account/orders">view your orders</Link>.</div>}
 
       <div className="row order-detail-grid" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div className="card order-detail-items" style={{ flex: '1 1 340px' }}>
