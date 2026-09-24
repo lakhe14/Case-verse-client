@@ -10,10 +10,13 @@ export function ProtectedRoute({ children }) {
   return children;
 }
 
+// Admin pages: guests go to the staff sign-in, signed-in customers back to
+// their own account. The API enforces staff permissions independently.
 export function StaffRoute({ children, permission }) {
-  const { status, isStaff, can } = useAuth();
+  const { status, isStaff, isCustomer, can } = useAuth();
   const location = useLocation();
   if (status === 'loading') return <Spinner />;
+  if (isCustomer) return <Navigate to="/account" replace />;
   if (!isStaff) return <Navigate to="/admin/login" state={{ from: location }} replace />;
   if (permission && !can(permission)) {
     return (
@@ -22,5 +25,13 @@ export function StaffRoute({ children, permission }) {
       </div>
     );
   }
+  return children;
+}
+
+/** The staff sign-in page is part of /admin/*: a signed-in customer is sent to their account. */
+export function StaffLoginRoute({ children }) {
+  const { status, isCustomer } = useAuth();
+  if (status === 'loading') return <Spinner />;
+  if (isCustomer) return <Navigate to="/account" replace />;
   return children;
 }
