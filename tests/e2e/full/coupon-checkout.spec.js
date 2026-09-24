@@ -3,12 +3,8 @@
  * customer submits: the real server refuses the placement inside its
  * transaction, and checkout recovers without losing anything. Runs against the
  * isolated E2E API with the fixture coupon E2EBROWSERONCE (one use in total).
- *
- * The storefront hides the coupon field whenever the Dashain campaign window is
- * open (campaign_active), even though the server only refuses coupons when the
- * bundle applies. The window is open on these dates and has no override, so
- * this test rewrites that single flag in preview responses; every price, the
- * coupon validation and the placement itself stay real.
+ * A single cover takes a coupon even while the Dashain window is open (only a
+ * priced bundle blocks coupons), so nothing here is mocked.
  */
 import { expect, test } from '@playwright/test';
 import { essentialFailures, expectNoLeakedInternals } from '../helpers/monitor.js';
@@ -40,12 +36,6 @@ test('a coupon that runs out between preview and placement is dropped cleanly an
   await fillCart(request, customerA, id);
   const ordersBefore = await orderCount(request, customerA);
 
-  await page.route(`${API}/orders/preview`, async (route) => {
-    const response = await route.fetch();
-    const json = await response.json();
-    if (json?.data) json.data.campaign_active = false;
-    await route.fulfill({ response, json });
-  });
   await useSession(page, customerA);
   await page.goto('/checkout');
   await page.getByLabel('ParcelMoover delivery destination').selectOption('e2e-kathmandu');
