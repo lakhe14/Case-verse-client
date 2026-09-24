@@ -17,10 +17,11 @@ export default function AdminOrders() {
   return (
     <div className="col">
       <h1>Orders</h1>
-      <div className="row">
+      <div className="row" style={{ flexWrap: 'wrap' }} role="group" aria-label="Filter orders by status">
         {STATUSES.map((s) => (
           <button
             key={s || 'all'}
+            aria-pressed={status === s}
             className={`btn sm ${status === s ? '' : 'subtle'}`}
             onClick={() => { setStatus(s); setPage(1); }}
           >
