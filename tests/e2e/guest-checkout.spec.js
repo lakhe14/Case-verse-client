@@ -4,6 +4,7 @@ import { essentialFailures, expectNoLeakedInternals } from './helpers/monitor.js
 import { API } from './helpers/session.js';
 import { REPRESENTATIVE, expectNoHorizontalOverflow } from './helpers/viewport.js';
 import { SYNTHETIC_GUEST_TOKEN, delay, json, syntheticOrder } from './helpers/mocks.js';
+import { chooseDestination } from './helpers/destination.js';
 
 async function fillGuestDetails(page) {
   await page.getByLabel('Full name').fill('QA Guest');
@@ -35,9 +36,7 @@ test.describe('guest checkout', () => {
       await fillGuestDetails(page);
 
       // Live ParcelMoover destinations from the real API; the rate is quoted server-side.
-      const destination = page.getByLabel('ParcelMoover delivery destination');
-      await expect.poll(() => destination.locator('option').count()).toBeGreaterThan(1);
-      await destination.selectOption({ index: 1 });
+      await chooseDestination(page, 'Pokhara', /^Pokhara, Kaski/);
 
       const summary = page.locator('.checkout-summary');
       await expect(summary.locator('.summary-total')).toBeVisible({ timeout: 15_000 });
@@ -60,7 +59,7 @@ test.describe('guest checkout', () => {
     await addToCartFromPdp(page, 'flame-silver');
     await page.goto('/checkout');
     await fillGuestDetails(page);
-    await page.getByLabel('ParcelMoover delivery destination').selectOption({ index: 1 });
+    await chooseDestination(page, 'Pokhara', /^Pokhara, Kaski/);
     await expect(page.locator('.checkout-summary .summary-total')).toBeVisible({ timeout: 15_000 });
 
     // Order creation is intercepted: the request never reaches the server.

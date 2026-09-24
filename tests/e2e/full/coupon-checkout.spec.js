@@ -9,6 +9,7 @@
 import { expect, test } from '@playwright/test';
 import { essentialFailures, expectNoLeakedInternals } from '../helpers/monitor.js';
 import { API, apiLogin, bearer, useSession } from '../helpers/session.js';
+import { chooseDestination, destinationInput } from '../helpers/destination.js';
 
 test.skip(!process.env.E2E_FULL, 'Needs the isolated E2E environment: npm run test:e2e:full');
 test.use({ trace: 'off', screenshot: 'off', video: 'off' });
@@ -38,7 +39,7 @@ test('a coupon that runs out between preview and placement is dropped cleanly an
 
   await useSession(page, customerA);
   await page.goto('/checkout');
-  await page.getByLabel('ParcelMoover delivery destination').selectOption('e2e-kathmandu');
+  await chooseDestination(page, 'Inside Valley', 'Inside Valley, Kathmandu');
   const total = page.locator('.checkout-summary .summary-total');
   await expect(total).toContainText('799');
 
@@ -61,7 +62,7 @@ test('a coupon that runs out between preview and placement is dropped cleanly an
   await expect(page.getByText(`“${CODE}” applied`)).toHaveCount(0);
   await expect(total).toContainText('799');
   await expect(page.locator('.checkout-summary')).not.toContainText('Coupon');
-  await expect(page.getByLabel('ParcelMoover delivery destination')).toHaveValue('e2e-kathmandu');
+  await expect(destinationInput(page)).toHaveAttribute('data-value', 'e2e-kathmandu');
   await expect(page.locator('input[name="ship"]:checked')).toHaveCount(1);
   expect(await orderCount(request, customerA)).toBe(ordersBefore);
   const cart = await (await request.get(`${API}/cart`, { headers: bearer(customerA) })).json();

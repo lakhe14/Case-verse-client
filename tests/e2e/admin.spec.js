@@ -34,14 +34,17 @@ test.describe('admin route protection', () => {
     expect(failures).toEqual([]);
   });
 
-  test('a customer account is denied in the UI and by the API', async ({ page, request }) => {
+  test('a customer account is sent to its own account page and refused by the API', async ({ page, request }) => {
     const reason = notConfigured('customer');
     test.skip(Boolean(reason), reason);
     const failures = essentialFailures(page);
     const customer = await apiLogin(request, 'customer');
     await useSession(page, customer);
-    await page.goto('/admin/payment-confirmations');
-    await expect(page).toHaveURL(/\/admin\/login$/);
+    for (const path of ['/admin/payment-confirmations', '/admin', '/admin/login']) {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/account$/);
+      await expect(page.getByRole('heading', { name: 'Staff sign in' })).toHaveCount(0);
+    }
     await expect(page.getByRole('heading', { name: 'Payment review' })).toHaveCount(0);
     // Hidden navigation is not authorization: the server must refuse too.
     for (const [method, path] of [...PAYMENT_ENDPOINTS, ['GET', '/admin/orders']]) {

@@ -52,9 +52,11 @@ export const syntheticCart = {
   has_stock_issue: false,
 };
 
+// Same shape as GET /shipping/parcelmoover/destinations (provider fields plus
+// the parsed label, locality and district used for search and display).
 export const syntheticDestinations = [
-  { id: 'qa-dest-inside', name: 'QA inside valley', zone: 'Inside valley', valley: true },
-  { id: 'qa-dest-outside', name: 'QA outside valley', zone: 'Outside valley', valley: false },
+  { id: 'qa-dest-inside', name: 'QA INSIDE VALLEY - KTM', zone: 'inside_valley', valley: 'inside', label: 'Qa Inside Valley, Kathmandu', locality: 'Qa Inside Valley', district: 'Kathmandu' },
+  { id: 'qa-dest-outside', name: 'QA POKHARA - KASKI', zone: 'major_cities', valley: 'outside', label: 'Qa Pokhara, Kaski', locality: 'Qa Pokhara', district: 'Kaski' },
 ];
 
 export function syntheticPreview({ shipping = 100 } = {}) {
@@ -122,6 +124,15 @@ export async function mockDestinations(page, { fail = false, delayMs = 0 } = {})
   await page.route('**/api/shipping/parcelmoover/destinations', async (route) => {
     if (delayMs) await delay(delayMs);
     return fail ? serverError(route) : json(route, { data: syntheticDestinations });
+  });
+  // Place search answers with the synthetic destinations only, so a mocked
+  // test never mixes in ids from the real provider list.
+  await page.route('**/api/geo/localities/search', (route) => {
+    const q = String(route.request().postDataJSON()?.q || '').toLowerCase();
+    const data = syntheticDestinations
+      .filter((destination) => destination.label.toLowerCase().includes(q))
+      .map((destination) => ({ kind: 'destination', place_type: 'destination', name: destination.label, municipality: null, district: destination.district, province: null, suggested_destination: { id: destination.id, name: destination.name, label: destination.label, district: destination.district, match: 'destination' }, district_destination_count: 1 }));
+    return json(route, { data });
   });
 }
 

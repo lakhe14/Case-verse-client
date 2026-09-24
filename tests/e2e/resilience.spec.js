@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { essentialFailures, expectNoLeakedInternals } from './helpers/monitor.js';
 import { REPRESENTATIVE } from './helpers/viewport.js';
+import { chooseDestination, destinationInput } from './helpers/destination.js';
 import {
   delay, json, mockCustomerSession, mockDestinations, seedGuestCart, serverError, syntheticCart, syntheticLine, syntheticPreview,
 } from './helpers/mocks.js';
@@ -38,16 +39,18 @@ test.describe('slow network', () => {
     expect(failures).toEqual([]);
   });
 
-  test('delayed destinations keep the select empty and the order blocked until they arrive', async ({ page }) => {
+  test('delayed destinations keep the destination field disabled and the order blocked until they arrive', async ({ page }) => {
     const failures = essentialFailures(page);
     await seedGuestCart(page, [guestLine]);
     await page.route('**/api/guest-checkout/preview', (route) => json(route, { data: syntheticPreview() }));
     await mockDestinations(page, { delayMs: 1500 });
     await page.goto('/checkout');
-    const destination = page.getByLabel('ParcelMoover delivery destination');
-    await expect(destination.locator('option')).toHaveCount(1);
+    const destination = destinationInput(page);
+    await expect(destination).toBeDisabled();
     await expect(placeButton(page)).toBeDisabled();
-    await expect(destination.locator('option')).toHaveCount(3);
+    await expect(destination).toBeEnabled();
+    await destination.fill('qa');
+    await expect(page.getByRole('option')).toHaveCount(2);
     expect(failures).toEqual([]);
   });
 
@@ -62,12 +65,11 @@ test.describe('slow network', () => {
       return json(route, { data: syntheticPreview({ shipping: outside ? 200 : 100 }) });
     });
     await page.goto('/checkout');
-    const destination = page.getByLabel('ParcelMoover delivery destination');
-    await destination.selectOption('qa-dest-inside');
+    await chooseDestination(page, 'inside', 'Qa Inside Valley, Kathmandu');
     await expect(summary(page).locator('.summary-total')).toContainText('799.00');
     await expect(placeButton(page)).toBeEnabled();
 
-    await destination.selectOption('qa-dest-outside');
+    await chooseDestination(page, 'pokhara', 'Qa Pokhara, Kaski');
     await expect(summary(page).locator('.spinner')).toBeVisible();
     await expect(summary(page)).not.toContainText('799.00');
     await expect(placeButton(page)).toBeDisabled();
@@ -89,7 +91,7 @@ test.describe('slow network', () => {
     });
     await page.goto('/checkout');
     await fillGuestAddress(page);
-    await page.getByLabel('ParcelMoover delivery destination').selectOption('qa-dest-inside');
+    await chooseDestination(page, 'inside', 'Qa Inside Valley, Kathmandu');
     await expect(placeButton(page)).toBeDisabled();
     await page.getByLabel('Full name').press('Enter');
     await expect(summary(page).locator('.summary-total')).toContainText('799.00');
@@ -158,7 +160,7 @@ test.describe('API failures', () => {
       return previews === 1 ? serverError(route) : json(route, { data: syntheticPreview() });
     });
     await page.goto('/checkout');
-    await page.getByLabel('ParcelMoover delivery destination').selectOption('qa-dest-inside');
+    await chooseDestination(page, 'inside', 'Qa Inside Valley, Kathmandu');
     await expect(summary(page).locator('.alert.error')).toHaveText('Something went wrong');
     await expect(summary(page).locator('.spinner')).toHaveCount(0);
     await expect(placeButton(page)).toBeDisabled();
@@ -183,7 +185,7 @@ test.describe('API failures', () => {
     await page.goto('/checkout');
     await fillGuestAddress(page);
     failNext = true;
-    await page.getByLabel('ParcelMoover delivery destination').selectOption('qa-dest-inside');
+    await chooseDestination(page, 'inside', 'Qa Inside Valley, Kathmandu');
     await expect(summary(page).locator('.alert.error')).toHaveText('Something went wrong');
     await expect(placeButton(page)).toBeDisabled();
     await expectNoLeakedInternals(page, expect);

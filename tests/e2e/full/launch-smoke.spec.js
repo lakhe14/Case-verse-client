@@ -9,6 +9,7 @@ import { expect, test } from '@playwright/test';
 import { essentialFailures, expectNoLeakedInternals } from '../helpers/monitor.js';
 import { API, apiLogin, bearer, useSession } from '../helpers/session.js';
 import { expectNoHorizontalOverflow } from '../helpers/viewport.js';
+import { destinationInput } from '../helpers/destination.js';
 
 test.skip(!process.env.E2E_FULL, 'Needs the isolated E2E environment: npm run test:e2e:full');
 test.use({ trace: 'off', screenshot: 'off', video: 'off' });
@@ -131,12 +132,15 @@ test('a customer can complete checkout with the keyboard alone', async ({ page, 
   await useSession(page, customer);
   await page.goto('/checkout');
 
-  const destination = page.getByLabel('ParcelMoover delivery destination');
-  await expect(destination).toBeVisible();
-  // Reach the destination select by Tab, choose with the keyboard.
+  const destination = destinationInput(page);
+  await expect(destination).toBeEnabled();
+  // Reach the destination combobox by Tab, search and choose with the keyboard.
   for (let i = 0; i < 40 && !(await destination.evaluate((el) => el === document.activeElement)); i += 1) await page.keyboard.press('Tab');
   await expect(destination).toBeFocused();
-  await destination.selectOption('e2e-kathmandu'); // keyboard-equivalent choice on a focused native select
+  await page.keyboard.type('Inside Valley');
+  await expect(page.getByRole('option', { name: /^Inside Valley, Kathmandu/ })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(destination).toHaveAttribute('data-value', 'e2e-kathmandu');
   await expect(page.locator('.checkout-summary .summary-total')).toContainText('799');
 
   const place = page.getByRole('button', { name: 'Place order & continue to payment' });

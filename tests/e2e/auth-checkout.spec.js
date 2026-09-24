@@ -4,6 +4,7 @@ import { essentialFailures } from './helpers/monitor.js';
 import { restoreCart, snapshotCart } from './helpers/qa-cleanup.js';
 import { API, apiLogin, bearer, notConfigured, uiCustomerLogin, uiLogout, useSession } from './helpers/session.js';
 import { REPRESENTATIVE, expectNoHorizontalOverflow } from './helpers/viewport.js';
+import { chooseDestination, destinationInput } from './helpers/destination.js';
 import {
   SYNTHETIC_ORDER_ID, delay, json, mockCustomerSession, mockDestinations, syntheticOrder, syntheticPreview,
 } from './helpers/mocks.js';
@@ -31,11 +32,12 @@ test.describe('authenticated checkout', () => {
       await expect(page.locator('input[name="ship"]:checked')).toHaveCount(1);
       await expect(page.getByText('Billing address same as shipping')).toBeVisible();
 
-      const destination = page.getByLabel('ParcelMoover delivery destination');
-      await expect.poll(() => destination.locator('option').count()).toBeGreaterThan(1);
+      const destination = destinationInput(page);
+      await expect(destination).toBeEnabled({ timeout: 15_000 });
       const placeOrder = page.getByRole('button', { name: 'Place order & continue to payment' });
       await expect(placeOrder).toBeDisabled();
-      await destination.selectOption({ index: 1 });
+      // Live ParcelMoover list: search a town and pick its real destination.
+      await chooseDestination(page, 'Pokhara', /^Pokhara, Kaski/);
 
       const summary = page.locator('.checkout-summary');
       await expect(summary.locator('.summary-total')).toBeVisible({ timeout: 15_000 });
@@ -71,7 +73,7 @@ test.describe('authenticated checkout', () => {
     await page.route(`**/api/orders/${SYNTHETIC_ORDER_ID}`, (route) => json(route, { data: syntheticOrder() }));
 
     await page.goto('/checkout');
-    await page.getByLabel('ParcelMoover delivery destination').selectOption('qa-dest-inside');
+    await chooseDestination(page, 'inside', 'Qa Inside Valley, Kathmandu');
     await expect(page.locator('.checkout-summary .summary-total')).toContainText('799.00');
     const placeOrder = page.getByRole('button', { name: 'Place order & continue to payment' });
     await placeOrder.click();

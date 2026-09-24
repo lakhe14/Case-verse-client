@@ -10,6 +10,7 @@ import { essentialFailures } from '../helpers/monitor.js';
 import { API, apiLogin, bearer, uiCustomerLogin, useSession } from '../helpers/session.js';
 import { REPRESENTATIVE } from '../helpers/viewport.js';
 import { files } from '../helpers/mocks.js';
+import { chooseDestination } from '../helpers/destination.js';
 
 test.skip(!process.env.E2E_FULL, 'Needs the isolated E2E environment: npm run test:e2e:full');
 // Guest order pages carry the raw token in their URL: no traces, screenshots or video for this file.
@@ -70,7 +71,7 @@ test.describe('customer A order placement', () => {
     await addToCartFromPdp(page, 'glossy-white');
     await page.goto('/checkout');
     await expect(page.locator('input[name="ship"]:checked')).toHaveCount(1);
-    await page.getByLabel('ParcelMoover delivery destination').selectOption('e2e-kathmandu');
+    await chooseDestination(page, 'Inside Valley', 'Inside Valley, Kathmandu');
 
     // Server-authoritative totals: the page must show exactly what the API computes.
     const addresses = await (await request.get(`${API}/addresses`, { headers: bearer(session) })).json();
@@ -125,7 +126,7 @@ test.describe('guest order and payment lifecycle', () => {
     await page.goto('/checkout');
     await page.getByLabel('Full name').fill(`E2E guest ${RUN_ID}`);
     await page.getByLabel('Phone number').fill('9800000012');
-    await page.getByLabel('ParcelMoover delivery destination').selectOption('e2e-kathmandu');
+    await chooseDestination(page, 'Inside Valley', 'Inside Valley, Kathmandu');
     await page.getByLabel('Province').fill('Bagmati');
     await page.getByLabel('District').fill('Kathmandu');
     await page.getByLabel('Municipality / City').fill('Kathmandu');

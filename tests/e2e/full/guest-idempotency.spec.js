@@ -7,6 +7,7 @@ import { addToCartFromPdp } from '../helpers/catalog.js';
 import { essentialFailures } from '../helpers/monitor.js';
 import { API, apiLogin, bearer } from '../helpers/session.js';
 import { REPRESENTATIVE } from '../helpers/viewport.js';
+import { chooseDestination } from '../helpers/destination.js';
 
 test.skip(!process.env.E2E_FULL, 'Needs the isolated E2E environment: npm run test:e2e:full');
 test.use({ trace: 'off', screenshot: 'off', video: 'off' });
@@ -16,7 +17,7 @@ const RUN_ID = process.env.E2E_RUN_ID;
 async function fillGuest(page, name) {
   await page.getByLabel('Full name').fill(name);
   await page.getByLabel('Phone number').fill('9800000013');
-  await page.getByLabel('ParcelMoover delivery destination').selectOption('e2e-kathmandu');
+  await chooseDestination(page, 'Inside Valley', 'Inside Valley, Kathmandu');
   await page.getByLabel('Province').fill('Bagmati');
   await page.getByLabel('District').fill('Kathmandu');
   await page.getByLabel('Municipality / City').fill('Kathmandu');

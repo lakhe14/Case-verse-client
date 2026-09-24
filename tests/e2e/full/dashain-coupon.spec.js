@@ -9,6 +9,7 @@ import { expect, test } from '@playwright/test';
 import { essentialFailures, expectNoLeakedInternals } from '../helpers/monitor.js';
 import { API, apiLogin, bearer, useSession } from '../helpers/session.js';
 import { expectNoHorizontalOverflow } from '../helpers/viewport.js';
+import { chooseDestination } from '../helpers/destination.js';
 
 test.skip(!process.env.E2E_FULL, 'Needs the isolated E2E environment: npm run test:e2e:full');
 test.use({ trace: 'off', screenshot: 'off', video: 'off' });
@@ -34,7 +35,7 @@ async function setCart(request, session, variants) {
 
 async function openCheckout(page) {
   await page.goto('/checkout');
-  await page.getByLabel('ParcelMoover delivery destination').selectOption('e2e-kathmandu');
+  await chooseDestination(page, 'Inside Valley', 'Inside Valley, Kathmandu');
 }
 
 const total = (page) => page.locator('.checkout-summary .summary-total');
@@ -105,7 +106,7 @@ for (const viewport of VIEWPORTS) {
       // Before a destination is chosen the cart's own coupon_allowed decides.
       await expect(page.getByTestId('coupon-blocked')).toHaveText(BLOCKED);
       await expect(couponInput(page)).toHaveCount(0);
-      await page.getByLabel('ParcelMoover delivery destination').selectOption('e2e-kathmandu');
+      await chooseDestination(page, 'Inside Valley', 'Inside Valley, Kathmandu');
       await expect(total(page)).toContainText('1,299');
       await expect(page.getByTestId('coupon-blocked')).toHaveText(BLOCKED);
       await expect(couponInput(page)).toHaveCount(0);
