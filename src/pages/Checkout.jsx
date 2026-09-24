@@ -8,6 +8,19 @@ import { Spinner, ErrorText, Money, EmptyState } from '../components/ui';
 import SalePrice from '../components/SalePrice';
 import GuestCheckoutForm from '../components/GuestCheckoutForm';
 import usePageMeta from '../hooks/usePageMeta';
+import { useCampaign } from '../hooks/useCampaign';
+
+// The applied coupon survives a trip to the cart and back within this tab;
+// every preview re-validates it on the server, so nothing stale is trusted.
+const COUPON_KEY = 'caseverse_checkout_coupon';
+function readSavedCoupon() {
+  try { return sessionStorage.getItem(COUPON_KEY) || ''; } catch { return ''; }
+}
+function saveCoupon(code) {
+  try { if (code) sessionStorage.setItem(COUPON_KEY, code); else sessionStorage.removeItem(COUPON_KEY); } catch { /* storage unavailable */ }
+}
+
+const BUNDLE_COUPON_NOTE = 'Coupons can’t be combined with the Dashain Trio Offer.';
 
 // Server refusals that mean the coupon, not the order, is the problem.
 const COUPON_REFUSALS = new Set(['coupon_exhausted', 'coupon_used_by_user', 'coupon_invalid', 'coupon_expired', 'coupon_not_started', 'coupon_min_order', 'coupon_not_combinable_with_campaign']);
@@ -17,14 +30,17 @@ export default function Checkout() {
   const toast = useToast();
   const { isCustomer } = useAuth();
   const { cart, refresh } = useCart();
+  // Only used to re-price when the campaign starts or ends while on this page.
+  const campaignActive = useCampaign()?.active ?? null;
   usePageMeta('Checkout', 'Complete your CaseVerse order.');
 
   const [addrs, setAddrs] = useState(null);
   const [shippingId, setShippingId] = useState(null);
   const [billingSame, setBillingSame] = useState(true);
   const [billingId, setBillingId] = useState(null);
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [couponCode, setCouponCode] = useState(readSavedCoupon);
+  const [appliedCoupon, setAppliedCoupon] = useState(readSavedCoupon);
+  useEffect(() => saveCoupon(appliedCoupon), [appliedCoupon]);
   const [redeemPoints, setRedeemPoints] = useState(0);
   const [pointsBalance, setPointsBalance] = useState(0);
 
@@ -34,6 +50,10 @@ export default function Checkout() {
   const [placeError, setPlaceError] = useState(null);
   // A coupon refused at final placement (e.g. its last use was just taken).
   const [couponRejected, setCouponRejected] = useState(null);
+  // Status line for a coupon the page removed on its own (bundle now applies).
+  const [couponNotice, setCouponNotice] = useState('');
+  // Re-price whenever the cart contents change, not only on form changes.
+  const cartSignature = cart.items.map((item) => `${item.variant_id}:${item.quantity}`).join(',');
   const [loadError, setLoadError] = useState(null);
   const [destinations, setDestinations] = useState([]);
   const [destinationId, setDestinationId] = useState('');
@@ -83,9 +103,42 @@ export default function Checkout() {
       })
       .then((result) => { if (quoteRequest.current === requestId) setPreview(result); })
       .catch((e) => {
-        if (quoteRequest.current === requestId) { setPreviewError(e); setPreview(null); }
+        if (quoteRequest.current !== requestId) return;
+        setPreview(null);
+        if (appliedCoupon && e.code === 'coupon_not_combinable_with_campaign') {
+          // The cart now gets the Dashain bundle: drop the coupon and re-price
+          // without it (this effect re-runs) instead of keeping a refused code.
+          setAppliedCoupon('');
+          setCouponCode('');
+          setCouponNotice('Your coupon was removed because the Dashain Trio Offer is now applied.');
+          return;
+        }
+        setPreviewError(e);
       });
-  }, [shippingId, destinationId, appliedCoupon, redeemPoints, quoteAttempt]);
+  }, [shippingId, destinationId, appliedCoupon, redeemPoints, quoteAttempt, cartSignature, campaignActive]);
+
+  // The cart's own pricing (and its coupon_allowed) must follow a campaign
+  // start or end that happens while this page is open.
+  const campaignSeen = useRef(campaignActive);
+  useEffect(() => {
+    if (campaignSeen.current !== null && campaignActive !== null && campaignSeen.current !== campaignActive) refresh();
+    campaignSeen.current = campaignActive;
+  }, [campaignActive, refresh]);
+
+  // Coupon eligibility comes from the server (preview once priced, else the
+  // cart): blocked only while a Dashain pair is priced into this order.
+  const couponAllowed = preview?.data ? preview.data.coupon_allowed !== false : cart.coupon_allowed !== false;
+  const couponBlockedRef = useRef(null);
+  // True while focus is inside the coupon form (a removed element may never fire blur).
+  const couponFormFocused = useRef(false);
+  useEffect(() => {
+    // Only when the field was removed while it had focus: move focus to the
+    // note instead of stranding it on the page body. Never on page load.
+    if (!couponAllowed && couponFormFocused.current) {
+      couponFormFocused.current = false;
+      couponBlockedRef.current?.focus();
+    }
+  }, [couponAllowed]);
   // preview response is { data } shaped? endpoint returns r.data => the JSON body { data }
   // orderApi.preview returns response.data (the body). body = { data: {...} }
 
@@ -129,12 +182,14 @@ export default function Checkout() {
     e.preventDefault();
     const code = couponCode.trim().toUpperCase();
     setCouponRejected(null);
+    setCouponNotice('');
     setAppliedCoupon(code);
     if (code) toast.info(`Checking coupon ${code}…`);
   };
 
   const removeCoupon = () => {
     setCouponRejected(null);
+    setCouponNotice('');
     setAppliedCoupon('');
     setCouponCode('');
   };
@@ -152,6 +207,7 @@ export default function Checkout() {
       });
       await refresh();
       toast.success(`Order ${res.data.order_number} placed. Thank you!`);
+      saveCoupon('');
       navigate(`/account/orders/${res.data.id}`, { replace: true });
     } catch (e) {
       if (appliedCoupon && COUPON_REFUSALS.has(e.code)) {
@@ -232,12 +288,15 @@ export default function Checkout() {
 
           <div className="card">
             <h3>Coupon</h3>
-            {totals?.campaign_active ? (
-              <p className="muted small" style={{ marginBottom: 0 }}>
-                Coupon codes cannot be combined with the Dashain Trio Offer.
+            <p className="small" role="status" aria-live="polite" data-testid="coupon-notice" style={{ margin: couponNotice ? '0 0 8px' : 0 }}>
+              {couponNotice}
+            </p>
+            {!couponAllowed ? (
+              <p className="muted small" data-testid="coupon-blocked" ref={couponBlockedRef} tabIndex={-1} style={{ marginBottom: 0 }}>
+                {BUNDLE_COUPON_NOTE}
               </p>
             ) : (
-              <form className="row" style={{ gap: 8 }} onSubmit={applyCoupon}>
+              <form className="row" style={{ gap: 8 }} onSubmit={applyCoupon} onFocus={() => { couponFormFocused.current = true; }} onBlur={() => { couponFormFocused.current = false; }}>
                 <input
                   placeholder="Coupon code"
                   value={couponCode}
