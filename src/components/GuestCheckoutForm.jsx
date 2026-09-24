@@ -6,55 +6,19 @@ import { useToast } from '../context/ToastContext';
 import { Spinner, ErrorText, Money } from './ui';
 import SalePrice from './SalePrice';
 import { newIdempotencyKey } from '../utils/idempotencyKey';
+import DestinationCombobox from './DestinationCombobox';
+import useLocationPrefill, { areaFromAddress } from '../hooks/useLocationPrefill';
 
 const EMPTY_GUEST = {
   name: '', phone: '', province: '', district: '', municipality: '', area: '', landmark: '', notes: '', parcelmoover_destination_id: '', parcelmoover_destination_name: '',
 };
 
-function useGeolocation() {
-  const [status, setStatus] = useState('idle'); // idle | locating | done | denied | unavailable
-  const [coords, setCoords] = useState(null);
-  const [message, setMessage] = useState(null);
-
-  const locate = () => {
-    if (!window.isSecureContext) {
-      setStatus('unavailable');
-      setMessage('Location needs a secure (https) connection here — enter your address manually.');
-      return;
-    }
-    if (!navigator.geolocation) {
-      setStatus('unavailable');
-      setMessage('Your browser does not support location — enter your address manually.');
-      return;
-    }
-    setStatus('locating');
-    setMessage(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-        setStatus('done');
-        setMessage('Location captured. Please still fill in your address below.');
-      },
-      (err) => {
-        setStatus(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable');
-        setMessage(
-          err.code === err.PERMISSION_DENIED
-            ? 'Location permission was not given — no problem, just fill in your address below.'
-            : 'Could not get your location right now — enter your address manually.'
-        );
-      },
-      { timeout: 8000 }
-    );
-  };
-
-  return { status, coords, message, locate };
-}
-
 export default function GuestCheckoutForm() {
   const navigate = useNavigate();
   const toast = useToast();
   const { cart, clear } = useCart();
-  const geo = useGeolocation();
+  const location = useLocationPrefill();
+  const [destinationContext, setDestinationContext] = useState(null);
 
   const [guest, setGuest] = useState(EMPTY_GUEST);
   const [preview, setPreview] = useState(null);
@@ -101,11 +65,8 @@ export default function GuestCheckoutForm() {
     setPlaceError(null);
     const body = {
       items: cart.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })),
-      guest: {
-        ...guest,
-        latitude: geo.coords?.latitude,
-        longitude: geo.coords?.longitude,
-      },
+      // Address fields only: a looked-up position is never part of the order.
+      guest,
     };
     const signature = JSON.stringify(body);
     if (!submission.current || submission.current.signature !== signature) {
@@ -139,6 +100,31 @@ export default function GuestCheckoutForm() {
     }
   };
 
+  // Fills only what the lookup actually returned; every field stays editable.
+  const fillFromLocation = async () => {
+    const address = await location.locate();
+    if (!address) return;
+    const suggestion = address.suggested_destination;
+    const destination = suggestion && destinations.find((item) => item.id === suggestion.id);
+    setGuest((g) => ({
+      ...g,
+      province: address.province || g.province,
+      district: address.district || g.district,
+      municipality: address.municipality || g.municipality,
+      area: areaFromAddress(address) || g.area,
+      ...(destination ? { parcelmoover_destination_id: destination.id, parcelmoover_destination_name: destination.name } : {}),
+    }));
+    if (destination || !guest.parcelmoover_destination_id) {
+      setDestinationContext({
+        place: address.locality || null,
+        municipality: address.municipality,
+        district: address.district,
+        destination: destination ? (destination.label || destination.name) : null,
+        match: suggestion?.match || null,
+      });
+    }
+  };
+
   const totals = preview;
 
   return (
@@ -161,23 +147,19 @@ export default function GuestCheckoutForm() {
         <div className="card">
           <div className="spread" style={{ alignItems: 'center' }}>
             <h3 style={{ margin: 0 }}>Delivery address</h3>
-            <button type="button" className="btn ghost sm" onClick={geo.locate} disabled={geo.status === 'locating'}>
-              {geo.status === 'locating' ? 'Locating…' : 'Use my location'}
+            <button type="button" className="btn ghost sm" onClick={fillFromLocation} disabled={location.status === 'detecting'}>
+              {location.status === 'detecting' ? 'Detecting location…' : 'Use my location'}
             </button>
           </div>
-          {geo.message && <p className="muted small" role="status">{geo.message}</p>}
+          <LocationStatus location={location} />
           <div className="stack" style={{ marginTop: 8 }}>
-            <label className="field">
-              <span className="field-label">ParcelMoover delivery destination</span>
-              <select required value={guest.parcelmoover_destination_id} onChange={(event) => {
-                const destination = destinations.find((item) => item.id === event.target.value);
-                setGuest((value) => ({ ...value, parcelmoover_destination_id: event.target.value, parcelmoover_destination_name: destination?.name || '' }));
-              }}>
-                <option value="">Select a delivery destination</option>
-                {destinations.map((destination) => <option key={destination.id} value={destination.id}>{destination.name}{destination.zone ? ` — ${destination.zone}` : ''}</option>)}
-              </select>
-              {destinationsError && <span className="field-error">Delivery destinations are temporarily unavailable. Please try again.</span>}
-            </label>
+            <DestinationCombobox
+              destinations={destinations}
+              value={guest.parcelmoover_destination_id}
+              loadError={destinationsError}
+              context={destinationContext}
+              onChange={(id, destination) => setGuest((value) => ({ ...value, parcelmoover_destination_id: id, parcelmoover_destination_name: destination?.name || '' }))}
+            />
             <label className="field">
               <span className="field-label">Province</span>
               <input required value={guest.province} onChange={setField('province')} maxLength={100} />
@@ -247,7 +229,7 @@ export default function GuestCheckoutForm() {
             <div className="summary-total"><span>Total</span><Money value={totals.total_amount} /></div>
             {totals.shipping_method && <p className="muted small" style={{ marginTop: 8 }}>{totals.shipping_method}</p>}
             {!totals.shipping_method && (
-              <p className="muted small" style={{ marginTop: 8 }}>Select a ParcelMoover delivery destination and enter your physical address for an exact shipping cost.</p>
+              <p className="muted small" style={{ marginTop: 8 }}>Choose a ParcelMoover delivery destination and enter your physical address for an exact shipping cost.</p>
             )}
           </div>
         )}
@@ -262,4 +244,25 @@ export default function GuestCheckoutForm() {
       </div>
     </form>
   );
+}
+
+function LocationStatus({ location }) {
+  const { status, address, error } = location;
+  if (status === 'idle') return null;
+  let body;
+  if (status === 'detecting') body = <p className="muted small">Detecting location…</p>;
+  else if (status === 'detected') {
+    const place = [address.locality || address.municipality, address.district].filter(Boolean).join(', ');
+    body = (
+      <>
+        <p className="small" style={{ margin: 0 }}><strong>Location detected{place ? `: ${place}` : ''}</strong></p>
+        <p className="muted small" style={{ margin: '4px 0 0' }}>We filled the available address details. Please review them.</p>
+        <p className="muted small location-credit" style={{ margin: '4px 0 0' }}>Address data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a></p>
+      </>
+    );
+  } else if (status === 'denied') body = <p className="small" style={{ margin: 0 }}><strong>Permission denied.</strong> Allow location access in your browser settings, or enter your address below.</p>;
+  else if (status === 'timeout') body = <p className="small" style={{ margin: 0 }}><strong>Timeout.</strong> We could not get your location in time. Try again, or enter your address below.</p>;
+  else if (status === 'unavailable') body = <p className="small" style={{ margin: 0 }}><strong>Location unavailable.</strong> Your device could not share a location here. Enter your address below.</p>;
+  else body = <p className="small" style={{ margin: 0 }}><strong>Location detected, address not found.</strong> {error || 'Please enter your address below.'}</p>;
+  return <div className="location-status" role="status" aria-live="polite" data-testid="location-status" data-status={status}>{body}</div>;
 }

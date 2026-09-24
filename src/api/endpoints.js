@@ -32,6 +32,12 @@ export const shipping = {
   parcelmooverDestinations: () => get('/shipping/parcelmoover/destinations'),
 };
 
+// Server-side only: the browser never calls a geocoder or place search directly.
+export const geo = {
+  reverse: (latitude, longitude) => post('/geo/reverse', { latitude, longitude }),
+  searchLocalities: (q, config) => post('/geo/localities/search', { q }, config),
+};
+
 export const addresses = {
   list: () => get('/addresses'),
   create: (body) => post('/addresses', body),

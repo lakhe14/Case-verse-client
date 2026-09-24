@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import { Spinner, ErrorText, Money, EmptyState } from '../components/ui';
 import SalePrice from '../components/SalePrice';
 import GuestCheckoutForm from '../components/GuestCheckoutForm';
+import DestinationCombobox from '../components/DestinationCombobox';
 import usePageMeta from '../hooks/usePageMeta';
 import { useCampaign } from '../hooks/useCampaign';
 
@@ -235,14 +236,7 @@ export default function Checkout() {
         <div className="col checkout-form" style={{ flex: '1 1 320px', minWidth: 0 }}>
           <div className="card">
             <h3>Shipping address</h3>
-            <label className="field" style={{ marginBottom: 12 }}>
-              <span className="field-label">ParcelMoover delivery destination</span>
-              <select required value={destinationId} onChange={(event) => setDestinationId(event.target.value)}>
-                <option value="">Select a delivery destination</option>
-                {destinations.map((destination) => <option key={destination.id} value={destination.id}>{destination.name}{destination.zone ? ` — ${destination.zone}` : ''}</option>)}
-              </select>
-              {destinationError && <span className="field-error">Delivery destinations are temporarily unavailable. Please try again.</span>}
-            </label>
+            <DestinationCombobox destinations={destinations} value={destinationId} loadError={destinationError} onChange={(id) => setDestinationId(id)} />
             <div className="stack">
               {addrs.map((a) => (
                 <label key={a.id} className="row" style={{ alignItems: 'flex-start' }}>
@@ -357,7 +351,7 @@ export default function Checkout() {
                 <button type="button" className="btn subtle sm" onClick={() => setQuoteAttempt((n) => n + 1)}>Try again</button>
               </div>
             ) : !destinationId ? (
-              <p className="muted small">Select a ParcelMoover delivery destination to see shipping and your total.</p>
+              <p className="muted small">Choose a ParcelMoover delivery destination to see shipping and your total.</p>
             ) : (
               <Spinner />
             )

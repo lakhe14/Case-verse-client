@@ -96,6 +96,7 @@ export default function AdminOrderDetail() {
             {o.guest_area}, {o.guest_municipality}, {o.guest_district}, {o.guest_province}
             {o.guest_landmark && <><br />Landmark: {o.guest_landmark}</>}
             {o.guest_delivery_notes && <><br />Notes: {o.guest_delivery_notes}</>}
+            {/* Historical orders only: checkout no longer sends or stores a position. */}
             {o.guest_latitude != null && o.guest_longitude != null && (
               <><br />Pinned location: {o.guest_latitude}, {o.guest_longitude}</>
             )}
