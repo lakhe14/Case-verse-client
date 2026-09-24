@@ -148,3 +148,25 @@ test('a customer can complete checkout with the keyboard alone', async ({ page, 
   expect((await request.post(`${API}/orders/${orderId}/cancel`, { headers: bearer(customer) })).status()).toBe(200);
   expect(failures).toEqual([]);
 });
+
+test('an admin-uploaded product image loads on the storefront from the API origin', async ({ page, request }) => {
+  const failures = essentialFailures(page);
+  const manager = await apiLogin(request, 'limitedStaff');
+  const { data: product } = await (await request.get(`${API}/products/flame-silver`)).json();
+  // A small real PNG, uploaded like the admin UI does.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAJklEQVR42mNk+M9Qz0AEYBxVSF+FjP//MzAwMDAxMDAwMDD8BwBFbgcI0wlLEAAAAABJRU5ErkJggg==', 'base64');
+  const uploaded = await request.post(`${API}/admin/products/${product.id}/images`, { headers: bearer(manager), multipart: { images: { name: 'e2e-upload.png', mimeType: 'image/png', buffer: png } } });
+  expect(uploaded.status()).toBe(201);
+  const image = (await uploaded.json()).data.images.find((i) => i.url.startsWith('/uploads/') && !product.images.some((p) => p.id === i.id));
+  expect(image).toBeTruthy();
+  try {
+    await page.goto('/p/flame-silver');
+    const img = page.locator(`img[src$="${image.url}"]`).first();
+    await expect(img).toHaveAttribute('src', `${process.env.E2E_API_ORIGIN}${image.url}`);
+    await img.scrollIntoViewIfNeeded();
+    await expect.poll(() => img.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true);
+  } finally {
+    expect((await request.delete(`${API}/admin/products/${product.id}/images/${image.id}`, { headers: bearer(manager) })).status()).toBe(204);
+  }
+  expect(failures).toEqual([]);
+});
