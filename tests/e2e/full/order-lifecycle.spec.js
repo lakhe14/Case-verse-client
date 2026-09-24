@@ -22,15 +22,20 @@ async function productOf(request) {
   return data;
 }
 
-/** Lapses the order's hold and runs the payment-timeout cancellation (E2E database only). */
-function expireOrder(orderId) {
-  const result = spawnSync(process.execPath, [path.join(process.env.E2E_SERVER_DIR, 'scripts', 'e2e', 'expireOrder.js'), `--order-id=${orderId}`], {
+/**
+ * Moves the order's clock (E2E database only) and runs the payment-timeout
+ * check for it: by default the hold lapses; ageProofHours ages only the proof.
+ */
+function expireOrder(orderId, { ageProofHours, expect: reason = 'cancelled' } = {}) {
+  const args = [path.join(process.env.E2E_SERVER_DIR, 'scripts', 'e2e', 'expireOrder.js'), `--order-id=${orderId}`];
+  if (ageProofHours) args.push(`--age-proof=${ageProofHours}`);
+  const result = spawnSync(process.execPath, args, {
     cwd: process.env.E2E_SERVER_DIR,
     env: { ...process.env, NODE_ENV: 'e2e', E2E_ALLOW_DB_MUTATION: 'true' },
     encoding: 'utf8',
   });
   expect(result.status, result.stderr).toBe(0);
-  expect(result.stdout).toContain(`order ${orderId} | cancelled`);
+  expect(result.stdout).toContain(`order ${orderId} | ${reason}`);
 }
 
 async function guestOrder(request, variantId, label) {
@@ -132,5 +137,58 @@ test('deleting a product or variant with order history explains how to deactivat
 
   const still = await (await request.get(`${API}/products/${SLUG}`)).json();
   expect(still.data.variants.some((v) => v.id === variant.id)).toBe(true);
+  expect(failures).toEqual([]);
+});
+
+test('a payment proof past the review SLA is flagged for staff but never cancelled; the customer keeps waiting', async ({ page, request, browser }) => {
+  const failures = essentialFailures(page);
+  const product = await productOf(request);
+  const guest = await guestOrder(request, product.variants[0].id, 'proof-sla');
+  const upload = await request.post(`${API}/guest-checkout/orders/${guest.token}/payment-proof`, {
+    multipart: { proof: { name: 'proof.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64') } },
+  });
+  expect(upload.status()).toBe(200);
+  expireOrder(guest.order.id, { ageProofHours: 80, expect: 'awaiting_staff_review' });
+
+  await page.goto(`/order/guest/${guest.token}`);
+  await expect(page.getByTestId('proof-waiting')).toHaveText('Payment proof received. Waiting for staff verification.');
+  await expect(page.getByTestId('order-cancelled')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText(/overdue|expired/i);
+
+  const staffContext = await browser.newContext({ baseURL: process.env.E2E_BASE_URL });
+  const staffPage = await staffContext.newPage();
+  await useSession(staffPage, await apiLogin(request, 'staff'));
+  await staffPage.goto('/admin/payment-confirmations');
+  const row = staffPage.getByRole('row', { name: new RegExp(guest.order.order_number) });
+  await expect(row.getByTestId('review-overdue')).toHaveText('Review overdue');
+  await staffPage.goto(`/admin/orders/${guest.order.id}`);
+  await expect(staffPage.getByTestId('review-overdue')).toBeVisible();
+  await expect(staffPage.getByRole('button', { name: 'Approve payment' })).toBeVisible();
+  await staffContext.close();
+
+  const state = await (await request.get(`${API}/guest-checkout/orders/${guest.token}`)).json();
+  expect(state.data.status).toBe('pending');
+  expect(state.data.paymentConfirmation.status).toBe('proof_uploaded');
+  expect((await request.post(`${API}/guest-checkout/orders/${guest.token}/cancel`)).status()).toBe(200);
+  expect(failures).toEqual([]);
+});
+
+test('reviewing a payment whose order was just cancelled shows a clear conflict and drops the row', async ({ page, request }) => {
+  const failures = essentialFailures(page, { allow: [{ url: /\/api\/admin\/payment-confirmations\/\d+\/approve$/, status: 409 }] });
+  const product = await productOf(request);
+  const guest = await guestOrder(request, product.variants[0].id, 'review-cancelled');
+  expect((await request.post(`${API}/guest-checkout/orders/${guest.token}/payment-method/cod`)).status()).toBe(200);
+
+  await useSession(page, await apiLogin(request, 'staff'));
+  await page.goto('/admin/payment-confirmations');
+  const row = page.getByRole('row', { name: new RegExp(guest.order.order_number) });
+  await expect(row).toBeVisible();
+  // The customer cancels while the queue is open.
+  expect((await request.post(`${API}/guest-checkout/orders/${guest.token}/cancel`)).status()).toBe(200);
+  await row.getByRole('button', { name: 'Confirm COD' }).click();
+  await expect(page.getByTestId('review-conflict')).toHaveText('This order has already been cancelled, so its payment can no longer be reviewed.');
+  await expect(row).toHaveCount(0);
+  await expectNoLeakedInternals(page, expect);
+  await expect(page.locator('body')).not.toContainText(/Something went wrong/i);
   expect(failures).toEqual([]);
 });
