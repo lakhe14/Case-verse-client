@@ -196,7 +196,8 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
       (d) => (row.attrs[d.id] || '') !== (variant.attributes.find((a) => a.attribute_id === d.id)?.value || '')
     );
 
-  const saveRow = async () => {
+  const saveRow = async (e) => {
+    e.preventDefault();
     setBusy(true);
     setErr(null);
     try {
@@ -223,9 +224,31 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
     onChange();
   };
 
+  // Admin shape: stock_quantity is physical; reserved/available come with it.
+  const reserved = variant.reserved_quantity ?? 0;
+  const floorError = err?.code === 'stock_below_reserved' ? err.details : null;
+
   return (
-    <div className="card" style={{ padding: 12 }}>
-      <ErrorText error={err} />
+    <form className="card" style={{ padding: 12 }} onSubmit={saveRow} data-testid={`variant-row-${variant.id}`}>
+      {floorError ? (
+        <div className="alert error" role="alert" data-testid="stock-floor-error">
+          Stock cannot be set below {floorError.minimum_allowed_stock}. That many units are now reserved by pending orders.
+        </div>
+      ) : (
+        <ErrorText error={err} />
+      )}
+      {variant.reserved_quantity != null && (
+        <dl className="inv-stats" data-testid="variant-inventory">
+          <div><dt>Physical</dt><dd data-testid="inv-physical">{variant.stock_quantity}</dd></div>
+          <div><dt>Reserved</dt><dd data-testid="inv-reserved">{reserved}</dd></div>
+          <div><dt>Available</dt><dd data-testid="inv-available">{variant.available_quantity}</dd></div>
+        </dl>
+      )}
+      {reserved > 0 && (
+        <p className="inv-warning" id={`reserved-${variant.id}`} data-testid="reserved-warning">
+          {reserved} {reserved === 1 ? 'unit is' : 'units are'} reserved by pending orders. Physical stock cannot be reduced below {reserved}.
+        </p>
+      )}
       <div className="row" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label className="field" style={{ flex: '1 1 150px', marginBottom: 0 }}>
           <span className="small muted">SKU</span>
@@ -237,15 +260,12 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
             onChange={(e) => setRow({ ...row, price: e.target.value })} />
         </label>
         <label className="field" style={{ flex: '0 1 90px', marginBottom: 0 }}>
-          <span className="small muted">Stock</span>
-          <input type="number" min="0" required value={row.stock_quantity}
+          <span className="small muted">Physical stock</span>
+          {/* The server enforces the same floor; this only saves a round trip. */}
+          <input type="number" min={Math.min(reserved, variant.stock_quantity)} step="1" required value={row.stock_quantity}
+            aria-describedby={reserved > 0 ? `reserved-${variant.id}` : undefined}
             onChange={(e) => setRow({ ...row, stock_quantity: e.target.value })} />
         </label>
-        {variant.reserved_quantity != null && (
-          <p className="small muted" style={{ flex: '1 1 100%', margin: 0 }} data-testid="variant-inventory">
-            Physical {variant.stock_quantity}, reserved by unpaid orders {variant.reserved_quantity}, available {variant.available_quantity}
-          </p>
-        )}
         {attrDefs.map((d) => (
           <label className="field" key={d.id} style={{ flex: '1 1 130px', marginBottom: 0 }}>
             <span className="small muted">{d.name}</span>
@@ -263,12 +283,12 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
         </label>
       </div>
       <div className="row" style={{ marginTop: 8 }}>
-        <button className="btn sm" disabled={!dirty || busy} onClick={saveRow}>
+        <button type="submit" className="btn sm" disabled={!dirty || busy}>
           {busy ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
         </button>
-        <button className="btn ghost sm" onClick={del}>Delete</button>
+        <button type="button" className="btn ghost sm" onClick={del}>Delete</button>
       </div>
-    </div>
+    </form>
   );
 }
 

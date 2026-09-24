@@ -85,7 +85,10 @@ test('unpaid orders hold availability, confirmation deducts physical stock, canc
   const manager = await managerContext.newPage();
   await useSession(manager, await apiLogin(request, 'limitedStaff'));
   await manager.goto(`/admin/products/${productId}`);
-  await expect(manager.getByTestId('variant-inventory').first()).toHaveText(`Physical ${physical - holdQty}, reserved by unpaid orders 0, available 3`);
+  const inventoryBox = manager.getByTestId(`variant-row-${variant.id}`).getByTestId('variant-inventory');
+  await expect(inventoryBox.getByTestId('inv-physical')).toHaveText(String(physical - holdQty));
+  await expect(inventoryBox.getByTestId('inv-reserved')).toHaveText('0');
+  await expect(inventoryBox.getByTestId('inv-available')).toHaveText('3');
   await managerContext.close();
   expect(failures).toEqual([]);
 });
