@@ -93,7 +93,7 @@ export default function AdminCoupons() {
         <div className="table-wrap">
           <table className="data">
             <thead>
-              <tr><th>Code</th><th>Discount</th><th>Min order</th><th>Used</th><th>Active</th><th /></tr>
+              <tr><th>Code</th><th>Discount</th><th>Min order</th><th>Active uses</th><th>Active</th><th /></tr>
             </thead>
             <tbody>
               {data.data.map((c) => (
@@ -101,7 +101,7 @@ export default function AdminCoupons() {
                   <td>{c.code}<div className="muted small">{c.description}</div></td>
                   <td>{c.discount_type === 'percentage' ? `${c.discount_value}%` : c.discount_value}</td>
                   <td>{c.min_order_amount}</td>
-                  <td>{c.times_used}{c.usage_limit_total ? ` / ${c.usage_limit_total}` : ''}</td>
+                  <td>{c.times_used}{c.usage_limit_total ? ` / ${c.usage_limit_total}` : ''}{c.times_released > 0 && <div className="muted small">{c.times_released} released (unpaid orders cancelled)</div>}</td>
                   <td>{c.is_active ? 'Yes' : 'No'}</td>
                   <td>
                     <button className="btn subtle sm" onClick={() => toggle(c)}>{c.is_active ? 'Disable' : 'Enable'}</button>

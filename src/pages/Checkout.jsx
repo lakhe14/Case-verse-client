@@ -9,6 +9,9 @@ import SalePrice from '../components/SalePrice';
 import GuestCheckoutForm from '../components/GuestCheckoutForm';
 import usePageMeta from '../hooks/usePageMeta';
 
+// Server refusals that mean the coupon, not the order, is the problem.
+const COUPON_REFUSALS = new Set(['coupon_exhausted', 'coupon_used_by_user', 'coupon_invalid', 'coupon_expired', 'coupon_not_started', 'coupon_min_order', 'coupon_not_combinable_with_campaign']);
+
 export default function Checkout() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -29,6 +32,8 @@ export default function Checkout() {
   const [previewError, setPreviewError] = useState(null);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState(null);
+  // A coupon refused at final placement (e.g. its last use was just taken).
+  const [couponRejected, setCouponRejected] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [destinations, setDestinations] = useState([]);
   const [destinationId, setDestinationId] = useState('');
@@ -123,11 +128,13 @@ export default function Checkout() {
   const applyCoupon = (e) => {
     e.preventDefault();
     const code = couponCode.trim().toUpperCase();
+    setCouponRejected(null);
     setAppliedCoupon(code);
     if (code) toast.info(`Checking coupon ${code}…`);
   };
 
   const removeCoupon = () => {
+    setCouponRejected(null);
     setAppliedCoupon('');
     setCouponCode('');
   };
@@ -147,6 +154,16 @@ export default function Checkout() {
       toast.success(`Order ${res.data.order_number} placed. Thank you!`);
       navigate(`/account/orders/${res.data.id}`, { replace: true });
     } catch (e) {
+      if (appliedCoupon && COUPON_REFUSALS.has(e.code)) {
+        // Nothing was placed. Drop the coupon so the preview re-prices the
+        // order without it (no stale discount stays visible); the cart,
+        // address and destination stay as they are.
+        setCouponRejected({ code: appliedCoupon, message: e.message });
+        setAppliedCoupon('');
+        setCouponCode('');
+        toast.error('Your coupon could not be applied. Review the updated total and place your order again.');
+        return;
+      }
       setPlaceError(e);
       toast.error(e.message || 'We couldn’t place your order. Please try again.');
     } finally {
@@ -241,6 +258,11 @@ export default function Checkout() {
                 >
                   Remove
                 </button>
+              </p>
+            )}
+            {couponRejected && (
+              <p className="small" role="alert" data-testid="coupon-rejected" style={{ color: 'var(--danger)', marginBottom: 0 }}>
+                “{couponRejected.code}” was not applied: {couponRejected.message} Your order has not been placed yet; the total below is without the coupon.
               </p>
             )}
             {appliedCoupon && previewError && (
