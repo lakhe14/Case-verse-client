@@ -15,7 +15,7 @@ test.use({ trace: 'off', screenshot: 'off', video: 'off' });
 
 const RUN_ID = process.env.E2E_RUN_ID;
 const SLUG = 'bow-cherry-iconic';
-const TIMEOUT_MESSAGE = 'This order was cancelled because payment was not confirmed in time.';
+const TIMEOUT_MESSAGE = 'Payment was not confirmed in time, so the order was cancelled and its items were released.';
 
 async function productOf(request) {
   const { data } = await (await request.get(`${API}/products/${SLUG}`)).json();

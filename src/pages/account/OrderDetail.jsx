@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import { orders as api, reviews as reviewsApi } from '../../api/endpoints';
-import { Spinner, ErrorText, Money, StatusBadge, Stars } from '../../components/ui';
+import { Spinner, ErrorText } from '../../components/ui';
+import { OrderDelivery, OrderHeader, OrderStatusPanel, OrderSummary } from '../../components/OrderParts';
+import { trackOrderLink } from '../../utils/orderStatus';
 import PaymentConfirmation from '../../components/PaymentConfirmation';
 
 function ReviewForm({ productId, onDone }) {
@@ -61,89 +63,41 @@ export default function OrderDetail() {
 
   return (
     <div className="col">
-      <div className="order-detail-actions"><Link to="/account/orders" className="muted small">All orders</Link><Link to="/covers" className="muted small">Continue shopping</Link>{canCancel && <button className="btn danger sm" onClick={() => setCancelOpen(true)}>Cancel order</button>}</div>
-      <div className="spread">
-        <h2 style={{ margin: 0 }}>{o.order_number}</h2>
-        <StatusBadge status={o.status} />
+      <div className="order-detail-actions">
+        <Link to="/account/orders" className="muted small">All orders</Link>
+        <Link to="/covers" className="muted small">Continue shopping</Link>
+        <Link to={trackOrderLink(o.order_number)} className="muted small" data-testid="track-order-link">Public tracking link</Link>
+        {canCancel && <button className="btn danger sm" onClick={() => setCancelOpen(true)}>Cancel order</button>}
       </div>
-      <div className="muted small">Placed {new Date(o.placed_at).toLocaleString()}</div>
+      <OrderHeader order={o} />
 
       {o.paymentConfirmation && <PaymentConfirmation order={o} onUpdated={reload} />}
 
-      {o.status === 'cancelled' && <div className="alert ok" data-testid="order-cancelled">{o.cancellation_reason === 'payment_timeout' ? 'This order was cancelled because payment was not confirmed in time.' : 'This order was cancelled.'} <Link to="/covers">Shop other covers</Link> or <Link to="/account/orders">view your orders</Link>.</div>}
+      <OrderStatusPanel order={o}>
+        {o.status === 'cancelled' && <p className="small"><Link to="/covers">Shop other covers</Link> or <Link to="/account/orders">view your orders</Link>.</p>}
+      </OrderStatusPanel>
 
-      <div className="row order-detail-grid" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div className="card order-detail-items" style={{ flex: '1 1 340px' }}>
-          <h4>Items</h4>
-          {o.items.map((it) => (
-            <div key={it.id} style={{ borderTop: '1px solid var(--brass-line-soft)', paddingTop: 8, marginTop: 8 }}>
-              <div className="spread">
-                <span>{it.product_name_snap} × {it.quantity}</span>
-                <Money value={it.line_total} />
-              </div>
-              <div className="muted small">{it.sku_snap}</div>
-              {canReview && it.variant?.product?.id && !reviewed.includes(it.id) && (
-                reviewing === it.id ? (
-                  <ReviewForm
-                    productId={it.variant.product.id}
-                    onDone={() => { setReviewed((r) => [...r, it.id]); setReviewing(null); }}
-                  />
-                ) : (
-                  <button className="btn ghost sm" onClick={() => setReviewing(it.id)}>Write a review</button>
-                )
-              )}
-              {reviewed.includes(it.id) && <span className="badge approved">Review submitted</span>}
-            </div>
-          ))}
-          {(o.promoItems || []).map((p) => (
-            <div key={p.id} style={{ borderTop: '1px solid var(--brass-line-soft)', paddingTop: 8, marginTop: 8 }}>
-              <div className="spread">
-                <span>{p.name_snap} × {p.quantity}</span>
-                <span style={{ color: 'var(--sage)' }}>FREE</span>
-              </div>
-            </div>
-          ))}
-        </div>
+      <OrderSummary
+        order={o}
+        renderItemExtra={(it) => (
+          <>
+            {canReview && it.product?.id && !reviewed.includes(it.id) && (
+              reviewing === it.id ? (
+                <ReviewForm
+                  productId={it.product.id}
+                  onDone={() => { setReviewed((r) => [...r, it.id]); setReviewing(null); }}
+                />
+              ) : (
+                <button className="btn ghost sm" onClick={() => setReviewing(it.id)}>Write a review</button>
+              )
+            )}
+            {reviewed.includes(it.id) && <span className="badge approved">Review submitted</span>}
+          </>
+        )}
+      />
+      <OrderDelivery order={o} />
 
-        <div className="card order-detail-totals" style={{ flex: '0 0 260px' }}>
-          <h4>Totals</h4>
-          {o.campaign_name_snap && <p className="eyebrow" style={{ marginTop: 0 }}>{o.campaign_name_snap}</p>}
-          <div className="spread"><span className="muted">Subtotal</span><Money value={o.subtotal_amount} /></div>
-          {Number(o.bundle_discount_amount) > 0 && (
-            <div className="spread">
-              <span className="muted" style={{ whiteSpace: 'nowrap' }}>Bundle discount</span>
-              <span style={{ whiteSpace: 'nowrap' }}>−<Money value={o.bundle_discount_amount} /></span>
-            </div>
-          )}
-          <div className="spread"><span className="muted">Discount</span><Money value={o.discount_amount} /></div>
-          <div className="spread"><span className="muted">Shipping</span><Money value={o.shipping_amount} /></div>
-          {o.courier_destination_name && <div className="spread small"><span className="muted">ParcelMoover destination</span><span>{o.courier_destination_name}</span></div>}
-          <div className="spread money-serif" style={{ fontSize: '1.1rem', borderTop: '1px solid var(--brass-line)', paddingTop: 10, marginTop: 4 }}>
-            <span>Total</span><Money value={o.total_amount} />
-          </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <h4>Tracking</h4>
-        <ul className="timeline">
-          {(o.statusHistory || []).map((h) => (
-            <li key={h.id}>
-              <strong style={{ fontWeight: 500, textTransform: 'capitalize' }}>{h.status}</strong>
-              <div className="muted small">{new Date(h.changed_at).toLocaleString()}</div>
-              {h.note && <div className="muted small">{h.note}</div>}
-            </li>
-          ))}
-        </ul>
-      </div>
       {cancelOpen && <div className="customer-cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-order-title"><div className="customer-cancel-dialog"><h2 id="cancel-order-title">Cancel this order?</h2><p>Your reserved items will be released and you can return to the shop to choose another design or model.</p>{o.paymentConfirmation?.status === 'proof_uploaded' && <p className="alert error">A payment proof has already been submitted. Cancelling will make it ineligible for review.</p>}<ErrorText error={cancelError} /><div className="row"><button className="btn subtle" onClick={() => setCancelOpen(false)} disabled={cancelBusy}>Keep order</button><button className="btn danger" onClick={cancelOrder} disabled={cancelBusy}>{cancelBusy ? 'Cancelling…' : 'Cancel order'}</button></div></div></div>}
-
-      <div className="card">
-        <h4>Delivery address</h4>
-        <div className="muted small">
-          {o.shippingAddress?.recipient_name}, {o.shippingAddress?.line1}, {o.shippingAddress?.city}, {o.shippingAddress?.country}
-        </div>
-      </div>
     </div>
   );
 }

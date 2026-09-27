@@ -93,10 +93,11 @@ test.describe('customer A order placement', () => {
     expect(after.pagination.total).toBe(countBefore + 1);
     const persisted = (await (await request.get(`${API}/orders/${orderId}`, { headers: bearer(session) })).json()).data;
     await expect(page.getByRole('heading', { name: persisted.order_number })).toBeVisible();
-    expect(persisted).toMatchObject({ status: 'pending', subtotal_amount: '699.00', shipping_amount: '100.00', total_amount: '799.00', courier_destination_id: 'e2e-kathmandu' });
+    expect(persisted).toMatchObject({ status: 'pending', subtotal_amount: 699, shipping_amount: 100, total_amount: 799 });
+    expect(persisted.courier_destination_name).toBeTruthy();
     expect(persisted.items).toHaveLength(1);
-    expect(persisted.items[0]).toMatchObject({ quantity: 1, unit_price: '699.00', sku_snap: 'CV-GLOSSY-WHITE-IPHONE-14' });
-    expect(persisted.paymentConfirmation).toMatchObject({ status: 'pending', advance_amount: '100.00' });
+    expect(persisted.items[0]).toMatchObject({ quantity: 1, unit_price: 699, sku_snap: 'CV-GLOSSY-WHITE-IPHONE-14', model: 'iPhone 14' });
+    expect(persisted.paymentConfirmation).toMatchObject({ status: 'pending', advance_amount: 100 });
     expect(failures).toEqual([]);
   });
 

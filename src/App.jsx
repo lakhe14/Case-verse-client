@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import GuestOrder from './pages/GuestOrder';
+import TrackOrder from './pages/TrackOrder';
 import Wishlist from './pages/Wishlist';
 import InfoPage from './pages/InfoPage';
 
@@ -36,6 +37,7 @@ import AdminAttributes from './pages/admin/Attributes';
 import AdminOrders from './pages/admin/Orders';
 import AdminPaymentConfirmations from './pages/admin/PaymentConfirmations';
 import AdminOrderDetail from './pages/admin/OrderDetail';
+import { PrintInvoice, PrintLabel } from './pages/admin/PrintOrder';
 import AdminReviews from './pages/admin/Reviews';
 import AdminCoupons from './pages/admin/Coupons';
 import AdminCustomers from './pages/admin/Customers';
@@ -62,6 +64,7 @@ export default function App() {
           <Route path="cart" element={<Cart />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="order/guest/:token" element={<GuestOrder />} />
+          <Route path="track-order" element={<TrackOrder />} />
           <Route
             path="wishlist"
             element={
@@ -96,6 +99,9 @@ export default function App() {
         </Route>
 
         <Route path="/admin/login" element={<StaffLoginRoute><StaffLogin /></StaffLoginRoute>} />
+        {/* Print views: staff-only like the order page, but without the admin navigation. */}
+        <Route path="/admin/print/orders/:id/invoice" element={<StaffRoute permission="manage_orders"><PrintInvoice /></StaffRoute>} />
+        <Route path="/admin/print/orders/:id/label" element={<StaffRoute permission="manage_orders"><PrintLabel /></StaffRoute>} />
         <Route
           path="/admin"
           element={

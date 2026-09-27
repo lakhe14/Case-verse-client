@@ -907,3 +907,102 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
   .cart-sticky-bar { transition: transform 0.2s ease; }
   .cart-sticky-bar.is-hidden { transform: translateY(110%); }
 }
+
+/* ============================================================
+   Orders: status panel, timeline, public tracker
+   ============================================================ */
+.order-header { display: flex; flex-direction: column; gap: 4px; }
+.order-status-panel h3 { margin: 0 0 6px; }
+.order-status-panel .order-status-message { margin: 0 0 6px; line-height: 1.5; }
+.order-status-panel .order-status-next { margin: 0 0 12px; }
+.order-status-panel.tone-problem { border-color: rgba(255, 122, 138, 0.45) !important; }
+.order-status-panel.tone-action { border-color: rgba(245, 195, 106, 0.45) !important; }
+.order-status-panel.tone-done, .order-status-panel.tone-ok { border-color: rgba(97, 216, 155, 0.35) !important; }
+.order-timeline { list-style: none; margin: 14px 0 0; padding: 0; }
+.order-timeline li { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 0 0 18px 28px; }
+.order-timeline li::before { content: ''; position: absolute; left: 7px; top: 14px; bottom: 0; width: 2px; background: var(--brass-line); }
+.order-timeline li:last-child { padding-bottom: 0; }
+.order-timeline li:last-child::before { display: none; }
+.order-timeline-dot { position: absolute; left: 0; top: 3px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--brass-line); background: var(--paper); box-sizing: border-box; }
+.order-timeline li.is-done .order-timeline-dot { background: var(--sage); border-color: var(--sage); }
+.order-timeline li.is-current .order-timeline-dot { background: var(--oxblood); border-color: var(--oxblood); box-shadow: 0 0 0 4px rgba(145, 170, 255, 0.2); }
+.order-timeline li.is-problem .order-timeline-dot { background: var(--danger); border-color: var(--danger); }
+.storefront .order-timeline li.is-problem .order-timeline-dot { background: #ff7a8a; border-color: #ff7a8a; }
+.order-timeline li.is-upcoming { color: var(--ink-soft); }
+.order-timeline-label { font-weight: 600; }
+.order-timeline li.is-upcoming .order-timeline-label { font-weight: 400; }
+.order-timeline-at { font-size: 0.84rem; color: var(--ink-soft); }
+.order-line { border-top: 1px solid var(--brass-line-soft); padding-top: 8px; margin-top: 8px; }
+.order-line-model { display: block; font-size: 0.84rem; color: var(--ink-soft); }
+.order-total { font-size: 1.1rem; border-top: 1px solid var(--brass-line); padding-top: 10px; margin-top: 4px; }
+.order-due { border-top: 1px dashed var(--brass-line); margin-top: 12px; padding-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.nowrap { white-space: nowrap; }
+
+.storefront .track-page { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.track-intro h1 { margin: 0 0 8px; }
+.track-intro p { margin: 0 0 4px; }
+.track-form input { min-height: 50px; font-size: 1.05rem; }
+.track-form .btn.block { min-height: 52px; margin-top: 4px; }
+.track-error { margin: 14px 0 0; }
+.track-result { display: flex; flex-direction: column; gap: 16px; outline: none; }
+@media (max-width: 700px) {
+  .order-detail-totals { flex-basis: 100% !important; }
+}
+
+/* ============================================================
+   Staff print views: A4 invoice, A6 parcel label
+   ============================================================ */
+.print-shell { background: #fff; color: #111; min-height: 100vh; padding: 16px; font-family: Arial, Helvetica, sans-serif; }
+.print-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; max-width: 210mm; margin: 0 auto 16px; font-size: 0.9rem; }
+.print-toolbar a { color: #111; }
+.print-doc { background: #fff; color: #111; margin: 0 auto; box-shadow: 0 0 0 1px #ddd; }
+.print-brand { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; }
+.print-muted { color: #555; font-size: 0.8rem; }
+.print-doc h1, .print-doc h2 { color: #111; font-family: Arial, Helvetica, sans-serif; letter-spacing: 0; }
+.print-doc dl { display: grid; grid-template-columns: auto auto; gap: 2px 12px; margin: 0; font-size: 0.85rem; }
+.print-doc dt { color: #555; }
+.print-doc dd { margin: 0; font-weight: 600; }
+
+.print-invoice { width: 210mm; max-width: 100%; min-height: 250mm; padding: 14mm; box-sizing: border-box; font-size: 10.5pt; }
+.inv-head { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #111; padding-bottom: 10px; }
+.inv-meta h1 { margin: 0 0 6px; font-size: 1.6rem; text-align: right; }
+.inv-parties { display: flex; gap: 32px; margin: 14px 0; }
+.inv-parties > div { flex: 1; }
+.inv-parties h2, .inv-payment h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #555; margin: 0 0 6px; }
+.inv-parties p { margin: 0 0 3px; }
+.inv-items, .inv-totals { width: 100%; border-collapse: collapse; }
+.inv-items th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #111; padding: 6px 4px; }
+.inv-items td { border-bottom: 1px solid #ddd; padding: 6px 4px; vertical-align: top; }
+.inv-items tr { page-break-inside: avoid; break-inside: avoid; }
+.print-doc .num { text-align: right; white-space: nowrap; }
+.inv-bottom { display: flex; justify-content: space-between; gap: 24px; margin-top: 14px; break-inside: avoid; page-break-inside: avoid; }
+.inv-payment { flex: 1; }
+.inv-totals { width: 45%; min-width: 240px; }
+.inv-totals th { text-align: left; font-weight: 400; padding: 3px 4px; }
+.inv-totals td { text-align: right; padding: 3px 4px; white-space: nowrap; }
+.inv-grand th, .inv-grand td { border-top: 2px solid #111; font-weight: 800; font-size: 1.05rem; padding-top: 6px; }
+.inv-foot { margin-top: 24px; border-top: 1px solid #ddd; padding-top: 8px; }
+
+.print-label { width: 105mm; min-height: 148mm; padding: 5mm; box-sizing: border-box; border: 2px solid #111; display: flex; flex-direction: column; gap: 3mm; font-size: 10pt; line-height: 1.3; }
+.lbl-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #111; padding-bottom: 2mm; }
+.lbl-head .print-brand { font-size: 1.25rem; }
+.lbl-kind { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.04em; }
+.lbl-caption { display: block; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.06em; color: #333; }
+.lbl-ref strong { display: block; font-size: 15pt; letter-spacing: 0.04em; font-family: 'Courier New', monospace; }
+.lbl-to { display: flex; flex-direction: column; gap: 1mm; border-top: 1px solid #111; padding-top: 2mm; overflow-wrap: anywhere; }
+.lbl-name { font-size: 13pt; }
+.lbl-phone { font-size: 14pt; letter-spacing: 0.03em; }
+.lbl-cod { border: 2px solid #111; padding: 2mm; text-align: center; font-size: 11pt; }
+.lbl-cod strong { font-size: 15pt; }
+.lbl-cod.is-paid { border-style: dashed; }
+.lbl-foot { margin-top: auto; display: flex; flex-direction: column; gap: 0.5mm; font-size: 8.5pt; border-top: 1px solid #111; padding-top: 2mm; }
+
+@media print {
+  html, body { background: #fff !important; }
+  .print-shell { padding: 0; min-height: 0; }
+  .print-toolbar, .print-hide { display: none !important; }
+  .print-doc { box-shadow: none; margin: 0; }
+  .print-invoice { width: auto; min-height: 0; padding: 0; }
+  .print-label { width: auto; min-height: calc(148mm - 8mm); }
+  .print-doc, .print-doc * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

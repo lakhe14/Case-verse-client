@@ -74,7 +74,8 @@ test('a coupon that runs out between preview and placement is dropped cleanly an
   await expect(page).toHaveURL(/\/account\/orders\/\d+$/);
   const orderId = Number(page.url().split('/').pop());
   const persisted = (await (await request.get(`${API}/orders/${orderId}`, { headers: bearer(customerA) })).json()).data;
-  expect(persisted).toMatchObject({ coupon_id: null, discount_amount: '0.00', total_amount: '799.00' });
+  // Customer order view: numbers, and the coupon by code (internal ids stay server-side).
+  expect(persisted).toMatchObject({ coupon_code: null, discount_amount: 0, total_amount: 799 });
   expect(await orderCount(request, customerA)).toBe(ordersBefore + 1);
 
   // Release both holds and the coupon use.

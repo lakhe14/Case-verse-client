@@ -81,6 +81,11 @@ export const guestCheckout = {
   requestCod: (token) => post(`/guest-checkout/orders/${token}/payment-method/cod`),
 };
 
+// Public order lookup: order ID + delivery phone, sent in the body (never a URL).
+export const tracking = {
+  lookup: (body) => post('/order-tracking', body),
+};
+
 export const reviews = {
   all: (params) => get('/reviews', params),
   forProduct: (productId, params) => get(`/reviews/product/${productId}`, params),

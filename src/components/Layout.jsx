@@ -221,7 +221,7 @@ function Footer() {
 
           <nav className="footer-col" aria-label="Customer care">
             <h4>Customer care</h4>
-            <Link to="/faq">FAQ</Link><Link to="/shipping">Shipping & delivery</Link><Link to="/returns">Returns & refunds</Link><Link to="/contact">Contact</Link>
+            <Link to="/track-order">Track your order</Link><Link to="/faq">FAQ</Link><Link to="/shipping">Shipping & delivery</Link><Link to="/returns">Returns & refunds</Link><Link to="/contact">Contact</Link>
           </nav>
           <nav className="footer-col" aria-label="Legal">
             <h4>Legal</h4><Link to="/terms">Terms & conditions</Link><Link to="/privacy">Privacy policy</Link>

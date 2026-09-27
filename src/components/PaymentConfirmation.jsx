@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { orders as orderApi, guestCheckout } from '../api/endpoints';
 import { ErrorText, Money, StatusBadge } from './ui';
 import { whatsapp } from '../config';
+import { PAYMENT_STATUS_LABELS } from '../utils/orderStatus';
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const labels = { pending: 'Awaiting payment', proof_uploaded: 'Proof submitted', approved: 'Verified', rejected: 'Proof rejected', cod_pending: 'COD pending', cod_confirmed: 'COD confirmed' };
+const labels = PAYMENT_STATUS_LABELS;
 
 /** `guestToken` switches proof upload / COD request onto the public guest-checkout endpoints instead of the authenticated order endpoints — same UI, same validation, different ownership. */
 export default function PaymentConfirmation({ order, onUpdated, guestToken }) {
