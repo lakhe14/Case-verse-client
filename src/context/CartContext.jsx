@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cart as cartApi, guestCheckout } from '../api/endpoints';
 import { useAuth } from './AuthContext';
 
@@ -10,6 +10,8 @@ const EMPTY = {
   subtotal: 0,
   covers_qty: 0,
   bundle_discount: 0,
+  bundle_pairs: 0,
+  coupon_allowed: true,
   campaign_active: false,
   campaign_code: null,
   campaign_label: null,
@@ -19,10 +21,18 @@ const EMPTY = {
   has_stock_issue: false,
 };
 
+/**
+ * A guest's cart is only { variant_id, quantity } pairs in localStorage.
+ * Older entries also carried a display snapshot (name, price, stock); it is
+ * ignored — names, images, prices and stock always come from the server.
+ */
 function readGuestLines() {
   try {
     const raw = JSON.parse(localStorage.getItem(GUEST_CART_KEY));
-    return Array.isArray(raw) ? raw : [];
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((l) => ({ variant_id: Number(l?.variant_id), quantity: Number(l?.quantity) }))
+      .filter((l) => Number.isInteger(l.variant_id) && l.variant_id > 0 && Number.isInteger(l.quantity) && l.quantity > 0);
   } catch {
     return [];
   }
@@ -36,176 +46,171 @@ function writeGuestLines(lines) {
   }
 }
 
-/**
- * Guests have no server-side cart. Each line keeps a denormalized display
- * snapshot (captured from the product page at add-time) alongside the
- * variant id; money fields are always re-priced server-side via the public
- * guest-checkout preview endpoint, never trusted from the snapshot.
- */
-function shapeGuestCart(lines, priced) {
-  const serverLines = new Map((priced?.lines || []).map((line) => [line.variant_id, line]));
-  const items = lines.map((l) => {
-    const serverLine = serverLines.get(l.variant_id);
-    return ({
-    id: `guest-${l.variant_id}`,
-    variant_id: l.variant_id,
-    quantity: l.quantity,
-    // Once preview succeeds, these are server-authoritative rather than the
-    // localStorage snapshot captured when the guest added the item.
-    unit_price: serverLine?.unit_price ?? l.unit_price,
-    compare_at_price: serverLine?.compare_at_price ?? l.compare_at_price,
-    line_total: serverLine?.line_total ?? Number((l.unit_price * l.quantity).toFixed(2)),
-    available_stock: l.stock_quantity,
-    stock_ok: l.quantity <= l.stock_quantity,
-    product: l.product,
-    sku: l.sku,
-    });
-  });
-  const subtotal = Number(items.reduce((s, i) => s + i.line_total, 0).toFixed(2));
-  if (!priced) {
-    return {
-      ...EMPTY,
-      items,
-      subtotal,
-      estimated_total: subtotal,
-      item_count: items.reduce((n, i) => n + i.quantity, 0),
-      has_stock_issue: items.some((i) => !i.stock_ok),
-    };
-  }
-  return {
-    items,
-    subtotal: priced.subtotal,
-    covers_qty: priced.covers_qty,
-    bundle_discount: priced.bundle_discount,
-    campaign_active: priced.campaign_active,
-    campaign_code: priced.campaign_code,
-    campaign_label: priced.campaign_label,
-    free_items: priced.free_items,
-    estimated_total: priced.total_amount - priced.shipping_amount,
-    item_count: items.reduce((n, i) => n + i.quantity, 0),
-    has_stock_issue: items.some((i) => !i.stock_ok),
-  };
+const guestVariantId = (itemId) => Number(String(itemId).replace('guest-', ''));
+
+function stockError(line) {
+  const error = new Error(line.available_stock > 0 ? `Only ${line.available_stock} in stock` : 'This model is sold out');
+  error.code = 'insufficient_stock';
+  return error;
 }
 
 export function CartProvider({ children }) {
   const { isCustomer } = useAuth();
   const [cart, setCart] = useState(EMPTY);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [syncError, setSyncError] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const guestLinesRef = useRef(readGuestLines());
+  const cartRef = useRef(EMPTY);
+  // Every cart response carries a sequence number; a slower, older response
+  // can never overwrite the totals of a newer one.
+  const seqRef = useRef(0);
+  const returnFocusRef = useRef(null);
 
-  const repriceGuestCart = useCallback(async (lines) => {
-    if (!lines.length) {
-      setCart(EMPTY);
-      return;
+  const apply = useCallback((seq, next) => {
+    if (seq !== seqRef.current) return false;
+    cartRef.current = next;
+    setCart(next);
+    setSyncError(null);
+    return true;
+  }, []);
+
+  /** Server-prices a set of guest lines. Resolves to the priced cart, rejects on failure. */
+  const priceGuestLines = useCallback(async (lines) => {
+    if (!lines.length) return EMPTY;
+    const { data } = await guestCheckout.cart({ items: lines });
+    const missing = new Set(data.missing_variant_ids || []);
+    if (missing.size) {
+      const kept = guestLinesRef.current.filter((l) => !missing.has(l.variant_id));
+      guestLinesRef.current = kept;
+      writeGuestLines(kept);
     }
-    setCart(shapeGuestCart(lines, null));
-    try {
-      const { data } = await guestCheckout.preview({
-        items: lines.map((l) => ({ variant_id: l.variant_id, quantity: l.quantity })),
-      });
-      setCart(shapeGuestCart(lines, data));
-    } catch {
-      setCart(shapeGuestCart(lines, null));
-    }
+    const { missing_variant_ids, ...priced } = data;
+    return priced;
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!isCustomer) {
-      await repriceGuestCart(guestLinesRef.current);
-      return;
-    }
+    const seq = ++seqRef.current;
     setLoading(true);
     try {
-      const { data } = await cartApi.get();
-      setCart(data);
+      const next = isCustomer ? (await cartApi.get()).data : await priceGuestLines(guestLinesRef.current);
+      apply(seq, next);
+    } catch (e) {
+      if (seq === seqRef.current) setSyncError(e);
     } finally {
-      setLoading(false);
+      if (seq === seqRef.current) setLoading(false);
     }
-  }, [isCustomer, repriceGuestCart]);
+  }, [isCustomer, priceGuestLines, apply]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const addItem = useCallback(
-    async (variantId, quantity = 1, productSnapshot) => {
-      if (!isCustomer) {
-        const lines = [...guestLinesRef.current];
-        const existing = lines.find((l) => l.variant_id === variantId);
-        if (existing) {
-          existing.quantity += quantity;
-        } else {
-          lines.push({ variant_id: variantId, quantity, ...productSnapshot });
-        }
-        guestLinesRef.current = lines;
-        writeGuestLines(lines);
-        await repriceGuestCart(lines);
-        return cart;
-      }
-      const { data } = await cartApi.addItem({ variant_id: variantId, quantity });
-      setCart(data);
-      return data;
-    },
-    [isCustomer, repriceGuestCart, cart]
-  );
+  /**
+   * Replaces the guest's lines, priced by the server. A change that asks for
+   * more than the server says is available is refused and the previous cart
+   * stays, mirroring the signed-in cart API.
+   */
+  const commitGuestLines = useCallback(async (lines, grownVariantId) => {
+    const seq = ++seqRef.current;
+    const priced = await priceGuestLines(lines);
+    const grown = grownVariantId && priced.items.find((i) => i.variant_id === grownVariantId);
+    if (grown && !grown.stock_ok) throw stockError(grown);
+    guestLinesRef.current = lines;
+    writeGuestLines(lines);
+    apply(seq, priced);
+    return priced;
+  }, [priceGuestLines, apply]);
 
-  const updateItem = useCallback(
-    async (itemId, quantity) => {
-      if (!isCustomer) {
-        const variantId = Number(String(itemId).replace('guest-', ''));
-        let lines = guestLinesRef.current.map((l) => (l.variant_id === variantId ? { ...l, quantity } : l));
-        if (quantity <= 0) lines = lines.filter((l) => l.variant_id !== variantId);
-        guestLinesRef.current = lines;
-        writeGuestLines(lines);
-        await repriceGuestCart(lines);
-        return cart;
-      }
-      const { data } = await cartApi.updateItem(itemId, quantity);
-      setCart(data);
-      return data;
-    },
-    [isCustomer, repriceGuestCart, cart]
-  );
+  const runCustomer = useCallback(async (call) => {
+    const seq = ++seqRef.current;
+    const { data } = await call();
+    apply(seq, data);
+    return data;
+  }, [apply]);
 
-  const removeItem = useCallback(
-    async (itemId) => {
-      if (!isCustomer) {
-        const variantId = Number(String(itemId).replace('guest-', ''));
-        const lines = guestLinesRef.current.filter((l) => l.variant_id !== variantId);
-        guestLinesRef.current = lines;
-        writeGuestLines(lines);
-        await repriceGuestCart(lines);
-        return cart;
-      }
-      const { data } = await cartApi.removeItem(itemId);
-      setCart(data);
-      return data;
-    },
-    [isCustomer, repriceGuestCart, cart]
-  );
+  const addItem = useCallback(async (variantId, quantity = 1) => {
+    if (!isCustomer) {
+      const lines = guestLinesRef.current.map((l) => ({ ...l }));
+      const existing = lines.find((l) => l.variant_id === variantId);
+      if (existing) existing.quantity += quantity;
+      else lines.push({ variant_id: variantId, quantity });
+      return commitGuestLines(lines, variantId);
+    }
+    return runCustomer(() => cartApi.addItem({ variant_id: variantId, quantity }));
+  }, [isCustomer, commitGuestLines, runCustomer]);
+
+  const updateItem = useCallback(async (itemId, quantity) => {
+    if (!isCustomer) {
+      const variantId = guestVariantId(itemId);
+      const lines = guestLinesRef.current
+        .map((l) => (l.variant_id === variantId ? { ...l, quantity } : l))
+        .filter((l) => l.quantity > 0);
+      const previous = guestLinesRef.current.find((l) => l.variant_id === variantId);
+      return commitGuestLines(lines, previous && quantity > previous.quantity ? variantId : null);
+    }
+    return runCustomer(() => cartApi.updateItem(itemId, quantity));
+  }, [isCustomer, commitGuestLines, runCustomer]);
+
+  const removeItem = useCallback(async (itemId) => {
+    if (!isCustomer) {
+      const variantId = guestVariantId(itemId);
+      return commitGuestLines(guestLinesRef.current.filter((l) => l.variant_id !== variantId));
+    }
+    return runCustomer(() => cartApi.removeItem(itemId));
+  }, [isCustomer, commitGuestLines, runCustomer]);
 
   const clear = useCallback(async () => {
     if (!isCustomer) {
+      seqRef.current += 1;
       guestLinesRef.current = [];
       writeGuestLines([]);
+      cartRef.current = EMPTY;
       setCart(EMPTY);
       return EMPTY;
     }
-    const { data } = await cartApi.clear();
-    setCart(data);
-    return data;
-  }, [isCustomer]);
+    return runCustomer(() => cartApi.clear());
+  }, [isCustomer, runCustomer]);
 
-  const value = {
+  /**
+   * Buy Now: make sure the cart holds at least `quantity` of this model, then
+   * the caller goes to the normal checkout. Other items in the cart are kept
+   * (checkout shows them); a model already in the cart is never doubled.
+   */
+  const ensureItem = useCallback(async (variantId, quantity = 1) => {
+    // Read the cart as it is now, not as last rendered: the server's for a
+    // customer, the stored lines for a guest (current even mid-load).
+    const line = isCustomer
+      ? (await cartApi.get()).data.items.find((i) => i.variant_id === variantId)
+      : guestLinesRef.current.map((l) => ({ id: `guest-${l.variant_id}`, ...l })).find((l) => l.variant_id === variantId);
+    if (!line) return addItem(variantId, quantity);
+    if (line.quantity >= quantity) return cartRef.current;
+    return updateItem(line.id, quantity);
+  }, [isCustomer, addItem, updateItem]);
+
+  // `returnTo` is the control that opened the drawer; focus goes back to it on close.
+  const openDrawer = useCallback((returnTo) => {
+    returnFocusRef.current = returnTo instanceof HTMLElement ? returnTo : document.activeElement;
+    setDrawerOpen(true);
+  }, []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  const value = useMemo(() => ({
     cart,
     loading,
+    syncError,
     itemCount: cart.item_count || 0,
     refresh,
     addItem,
     updateItem,
     removeItem,
     clear,
-  };
+    ensureItem,
+    drawerOpen,
+    openDrawer,
+    closeDrawer,
+    drawerReturnFocusRef: returnFocusRef,
+  }), [cart, loading, syncError, refresh, addItem, updateItem, removeItem, clear, ensureItem, drawerOpen, openDrawer, closeDrawer]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -23,7 +23,7 @@ test.describe('authenticated checkout', () => {
 
       await page.getByRole('button', { name: /^Cart/ }).first().click();
       const miniCart = page.getByRole('dialog', { name: 'Your cart' });
-      await expect(miniCart).toContainText('SKU CV-PINK-LOVE-BOW-');
+      await expect(miniCart).toContainText('Pink love bow');
       await miniCart.getByRole('link', { name: 'Checkout' }).click();
 
       await expect(page).toHaveURL(/\/checkout$/);

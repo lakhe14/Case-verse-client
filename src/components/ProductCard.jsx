@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { wishlist as wishlistApi } from '../api/endpoints';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -25,7 +25,8 @@ function HeartIcon({ filled }) {
   );
 }
 
-export default function ProductCard({ product, onWishlistChange }) {
+// forwardRef: listings animate cards with AnimatePresence mode="popLayout", which measures them by ref.
+const ProductCard = forwardRef(function ProductCard({ product, onWishlistChange, to }, ref) {
   const { isCustomer } = useAuth();
   const toast = useToast();
   const [saved, setSaved] = useState(false);
@@ -55,8 +56,8 @@ export default function ProductCard({ product, onWishlistChange }) {
   };
 
   return (
-    <motion.article className="product-card" variants={reveal} layout="position" whileHover={reduce ? undefined : { y: -4 }} transition={motionTokens.spring.soft}>
-      <Link to={`/p/${product.slug}`} className="pc-link">
+    <motion.article ref={ref} className="product-card" variants={reveal} layout="position" whileHover={reduce ? undefined : { y: -4 }} transition={motionTokens.spring.soft}>
+      <Link to={to || `/p/${product.slug}`} className="pc-link">
         <div className="pc-media">
           {img ? (
             <motion.img src={img} alt={product.name} loading="lazy" whileHover={reduce ? undefined : { scale: 1.035 }} transition={{ duration: motionTokens.duration.normal, ease: motionTokens.ease.standard }} />
@@ -88,4 +89,6 @@ export default function ProductCard({ product, onWishlistChange }) {
       )}
     </motion.article>
   );
-}
+});
+
+export default ProductCard;
