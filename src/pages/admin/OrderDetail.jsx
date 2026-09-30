@@ -77,6 +77,10 @@ export default function AdminOrderDetail() {
         {o.user ? `${o.user.name}, ${o.user.email}` : `${o.guest_name} (guest), ${o.guest_phone}`}
       </div>
       <div className="muted small">Placed {new Date(o.placed_at).toLocaleString()}</div>
+      <div className="row admin-print-actions" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <Link to={`/admin/print/orders/${o.id}/invoice`} className="btn subtle sm" target="_blank" rel="noopener">Print invoice</Link>
+        <Link to={`/admin/print/orders/${o.id}/label`} className="btn subtle sm" target="_blank" rel="noopener">Print parcel label</Link>
+      </div>
       {o.status === 'cancelled' && CANCELLED_BY[o.cancellation_reason] && (
         <div className="muted small" data-testid="cancellation-reason">{CANCELLED_BY[o.cancellation_reason]}</div>
       )}

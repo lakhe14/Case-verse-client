@@ -24,16 +24,24 @@ export async function openPdp(page, slug) {
   await expect(page.getByRole('button', { name: 'Add to cart' })).toBeVisible();
 }
 
-/** Adds the PDP's current variant (optionally choosing a phone model) and waits for the confirmation. */
+/**
+ * Adds one model to the cart from the PDP. Without `model`, the first model
+ * that is in stock is chosen (a multi-model PDP pre-selects nothing). Waits
+ * for the cart drawer that Add to cart opens, then closes it.
+ */
 export async function addToCartFromPdp(page, slug, model) {
   await openPdp(page, slug);
-  if (model) {
-    const option = page.getByRole('group', { name: 'Phone Model' }).getByRole('button', { name: model, exact: true });
-    await option.click();
-    await expect(option).toHaveAttribute('aria-pressed', 'true');
-  }
+  const picker = page.getByRole('group', { name: /Phone Model/ });
+  const option = model
+    ? picker.getByRole('button', { name: model, exact: true })
+    : picker.locator('button:not([disabled])').first();
+  if ((await option.getAttribute('aria-pressed')) !== 'true') await option.click();
+  await expect(option).toHaveAttribute('aria-pressed', 'true');
   const sku = (await page.getByText(/^SKU /).last().innerText()).replace(/^SKU /, '').trim();
   await page.getByRole('button', { name: 'Add to cart' }).click();
-  await expect(page.getByRole('button', { name: 'Added to cart' })).toBeVisible();
+  const drawer = page.getByRole('dialog', { name: 'Your cart' });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('button', { name: 'Close cart' }).click();
+  await expect(drawer).toBeHidden();
   return { sku };
 }

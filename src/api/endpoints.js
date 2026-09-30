@@ -69,6 +69,8 @@ export const orders = {
 };
 
 export const guestCheckout = {
+  // Server prices and stock-checks the browser-held guest cart; nothing is stored.
+  cart: (body) => post('/guest-checkout/cart', body),
   preview: (body) => post('/guest-checkout/preview', body),
   // Only guest order creation carries an Idempotency-Key; reuse it for retries of the same submission.
   place: (body, idempotencyKey) => post('/guest-checkout/orders', body, { headers: { 'Idempotency-Key': idempotencyKey } }),
@@ -77,6 +79,11 @@ export const guestCheckout = {
   uploadPaymentProof: (token, formData) =>
     post(`/guest-checkout/orders/${token}/payment-proof`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   requestCod: (token) => post(`/guest-checkout/orders/${token}/payment-method/cod`),
+};
+
+// Public order lookup: order ID + delivery phone, sent in the body (never a URL).
+export const tracking = {
+  lookup: (body) => post('/order-tracking', body),
 };
 
 export const reviews = {

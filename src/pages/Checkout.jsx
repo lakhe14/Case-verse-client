@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { addresses as addressApi, orders as orderApi, loyalty as loyaltyApi, shipping as shippingApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -26,11 +26,29 @@ const BUNDLE_COUPON_NOTE = 'Coupons can’t be combined with the Dashain Trio Of
 // Server refusals that mean the coupon, not the order, is the problem.
 const COUPON_REFUSALS = new Set(['coupon_exhausted', 'coupon_used_by_user', 'coupon_invalid', 'coupon_expired', 'coupon_not_started', 'coupon_min_order', 'coupon_not_combinable_with_campaign']);
 
+/**
+ * Buy now adds to the normal cart, so anything already there is still being
+ * ordered. Say so plainly instead of silently dropping or hiding those items.
+ */
+function BuyNowNote({ cart, variantId }) {
+  if (!variantId) return null;
+  const others = cart.items.filter((item) => item.variant_id !== variantId);
+  if (!others.length) return null;
+  const count = others.reduce((n, item) => n + item.quantity, 0);
+  return (
+    <p className="alert buy-now-note" role="status" data-testid="buy-now-note">
+      Your cart already had {count} other item{count === 1 ? '' : 's'}, so {count === 1 ? 'it is' : 'they are'} included in this order.{' '}
+      <Link to="/cart">Edit your cart</Link> to remove {count === 1 ? 'it' : 'them'}.
+    </p>
+  );
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
   const toast = useToast();
   const { isCustomer } = useAuth();
-  const { cart, refresh } = useCart();
+  const { cart, refresh, loading: cartLoading } = useCart();
+  const buyNowVariantId = useLocation().state?.buyNow?.variantId;
   // Only used to re-price when the campaign starts or ends while on this page.
   const campaignActive = useCampaign()?.active ?? null;
   usePageMeta('Checkout', 'Complete your CaseVerse order.');
@@ -143,7 +161,7 @@ export default function Checkout() {
   // preview response is { data } shaped? endpoint returns r.data => the JSON body { data }
   // orderApi.preview returns response.data (the body). body = { data: {...} }
 
-  if (addrs === null) return <Spinner />;
+  if (addrs === null || (cartLoading && !cart.items.length)) return <Spinner />;
   if (loadError) {
     return (
       <EmptyState title="We couldn't load checkout">
@@ -165,6 +183,7 @@ export default function Checkout() {
       <div>
         <div className="checkout-backlinks"><Link to="/cart">← Back to cart</Link><Link to="/covers">Continue shopping</Link></div>
         <h1>Checkout</h1>
+        <BuyNowNote cart={cart} variantId={buyNowVariantId} />
         <GuestCheckoutForm />
       </div>
     );
@@ -232,6 +251,7 @@ export default function Checkout() {
     <div>
       <div className="checkout-backlinks"><Link to="/cart">← Back to cart</Link><Link to="/covers">Continue shopping</Link></div>
       <h1>Checkout</h1>
+      <BuyNowNote cart={cart} variantId={buyNowVariantId} />
       <div className="row checkout-layout" style={{ alignItems: 'flex-start', gap: '32px 40px', flexWrap: 'wrap' }}>
         <div className="col checkout-form" style={{ flex: '1 1 320px', minWidth: 0 }}>
           <div className="card">

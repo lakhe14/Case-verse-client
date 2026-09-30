@@ -74,21 +74,24 @@ export function Pagination({ page, pages, onChange }) {
   );
 }
 
-export function QuantityStepper({ value, min = 1, max = 99, onChange }) {
+export function QuantityStepper({ value, min = 1, max = 99, onChange, disabled = false, label }) {
+  const of = label ? ` of ${label}` : '';
   return (
-    <div className="qty">
+    <div className="qty" role="group" aria-label={label ? `Quantity of ${label}` : 'Quantity'}>
       <button
+        type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
-        disabled={value <= min}
-        aria-label="Decrease quantity"
+        disabled={disabled || value <= min}
+        aria-label={`Decrease quantity${of}`}
       >
         −
       </button>
-      <span className="qty-n">{value}</span>
+      <span className="qty-n" aria-live="polite">{value}</span>
       <button
+        type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
-        disabled={value >= max}
-        aria-label="Increase quantity"
+        disabled={disabled || value >= max}
+        aria-label={`Increase quantity${of}`}
       >
         +
       </button>

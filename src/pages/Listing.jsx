@@ -1,15 +1,16 @@
 import { Link, useSearchParams } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useAsync from '../hooks/useAsync';
 import { catalog } from '../api/endpoints';
 import ProductCard from '../components/ProductCard';
-import { Spinner, ErrorText, EmptyState, Pagination } from '../components/ui';
+import { ErrorText, EmptyState, Pagination } from '../components/ui';
 import usePageMeta from '../hooks/usePageMeta';
 import { AnimatePresence } from 'motion/react';
 import { Reveal, StaggerGroup } from '../motion/MotionPrimitives';
 import LimitedSale from '../components/LimitedSale';
 
 const SORTS = [['newest', 'Newest'], ['name_asc', 'Name A to Z'], ['name_desc', 'Name Z to A']];
+const SEARCH_EXAMPLES = ['floral', 'bow', 'black', 'cherry', 'iPhone 15'];
 const COPY = {
   'iphone-covers': {
     title: 'Phone covers',
@@ -23,6 +24,29 @@ const COPY = {
   },
 };
 
+// Model words a search can name; the server does the real matching.
+const MODEL_WORDS = new Set(['pro', 'max', 'plus', 'mini', 'e']);
+
+/**
+ * When the search names a model ("iphone 15 pro"), link each result straight
+ * to that model in stock so the product page opens with it chosen.
+ */
+function modelLink(product, q) {
+  const terms = String(q || '').toLowerCase().replace(/([a-z])(\d)/g, '$1 $2').split(/[^a-z0-9]+/).filter(Boolean);
+  const numbers = terms.filter((t) => /^\d+$/.test(t));
+  if (!numbers.length) return undefined;
+  const words = terms.filter((t) => MODEL_WORDS.has(t));
+  const match = product.variants?.find((v) => {
+    if (!v.in_stock) return false;
+    const model = v.attributes.map((a) => a.value).join(' ');
+    const parts = model.toLowerCase().split(/\s+/);
+    return numbers.every((n) => parts.includes(n)) && words.every((w) => parts.includes(w))
+      && parts.filter((p) => MODEL_WORDS.has(p)).every((p) => words.includes(p));
+  });
+  if (!match) return undefined;
+  return `/p/${product.slug}?model=${encodeURIComponent(match.attributes.map((a) => a.value).join(' / '))}`;
+}
+
 export default function Listing({ categorySlug }) {
   const [params, setParams] = useSearchParams();
   const effectiveCategory = categorySlug || params.get('category') || undefined;
@@ -32,6 +56,10 @@ export default function Listing({ categorySlug }) {
     page: Number(params.get('page') || 1), limit: 12,
   }), [effectiveCategory, params]);
   const { data, loading, error, reload } = useAsync(() => catalog.products(query), [JSON.stringify(query)]);
+  const [draft, setDraft] = useState(query.q || '');
+  const inputRef = useRef(null);
+  useEffect(() => setDraft(query.q || ''), [query.q]);
+
   const patch = (next) => {
     const merged = new URLSearchParams(params);
     Object.entries(next).forEach(([key, value]) => {
@@ -41,9 +69,16 @@ export default function Listing({ categorySlug }) {
     if (!('page' in next)) merged.delete('page');
     setParams(merged);
   };
-  const isShop = !categorySlug;
-  const heading = isShop && query.q ? `Results for "${query.q}"` : copy.title;
-  usePageMeta(heading, isShop && query.q ? `Search results for "${query.q}" at CaseVerse.` : copy.meta);
+  const search = (value) => patch({ q: value.trim() || undefined });
+  const clearSearch = () => {
+    setDraft('');
+    patch({ q: undefined });
+    inputRef.current?.focus();
+  };
+
+  const heading = query.q ? `Results for "${query.q}"` : copy.title;
+  usePageMeta(heading, query.q ? `Search results for "${query.q}" at CaseVerse.` : copy.meta);
+  const total = data?.pagination?.total;
 
   return (
     <div className="shop-page">
@@ -51,23 +86,55 @@ export default function Listing({ categorySlug }) {
       <Reveal as="p" className="eyebrow">CASEVERSE / COLLECTION</Reveal>
       <Reveal as="h1" style={{ marginBottom: 10 }}>{heading}</Reveal>
       <Reveal as="p" className="muted" style={{ maxWidth: '58ch', marginTop: 0 }}>{copy.intro}</Reveal>
-      <div className="spread" style={{ margin: '28px 0 0', gap: 12, flexWrap: 'wrap' }}>
-        {isShop ? (
-          <form style={{ flex: '1 1 200px', maxWidth: 300 }} onSubmit={(event) => { event.preventDefault(); patch({ q: event.target.q.value.trim() || undefined }); }}>
-            <input name="q" placeholder="Search phone covers" defaultValue={query.q || ''} />
-          </form>
-        ) : <span className="muted small">{data?.pagination?.total ? `${data.pagination.total} item${data.pagination.total === 1 ? '' : 's'}` : ''}</span>}
-        <select value={query.sort} onChange={(event) => patch({ sort: event.target.value })} style={{ width: 170, maxWidth: '100%' }}>
+      <div className="listing-tools">
+        <form className="listing-search" role="search" onSubmit={(event) => { event.preventDefault(); search(draft); }}>
+          <label htmlFor="listing-search-input" className="sr-only">Search covers by design or iPhone model</label>
+          <input
+            id="listing-search-input"
+            ref={inputRef}
+            type="search"
+            name="q"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Design or iPhone model, e.g. floral, 15 Pro"
+            autoComplete="off"
+            enterKeyHint="search"
+            maxLength={120}
+          />
+          {draft && (
+            <button type="button" className="listing-search-clear" onClick={clearSearch} aria-label="Clear search">×</button>
+          )}
+          <button type="submit" className="btn subtle listing-search-go">Search</button>
+        </form>
+        <select aria-label="Sort" value={query.sort} onChange={(event) => patch({ sort: event.target.value })} className="listing-sort">
           {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
-      </div></div>
-      <LimitedSale />
+      </div>
+      <p className="muted small listing-count" aria-live="polite">
+        {loading || total == null ? '' : `${total} item${total === 1 ? '' : 's'}`}
+      </p>
+      </div>
+      {!(query.q && data && !data.data?.length) && <LimitedSale />}
       {error ? <div className="catalog-error"><ErrorText error={error} /><button type="button" className="btn subtle" onClick={() => reload().catch(() => {})}>Try again</button></div> : loading ? <div className="catalog-skeleton" aria-label="Loading products">{Array.from({ length: 8 }, (_, i) => <div className="skel" key={i} />)}</div> : !data?.data?.length ? (
-        <EmptyState title={query.q ? `No results for "${query.q}"` : 'Nothing here yet'}>
-          <p className="muted" style={{ maxWidth: '38ch', margin: '0 auto 14px' }}>{query.q ? 'Nothing matched that search. Try a different word, or browse the full range.' : 'This section is being stocked. Check back soon.'}</p>
-          <Link to="/shop" className="btn sm">Browse everything</Link>
+        <EmptyState title={query.q ? `No covers match "${query.q}"` : 'Nothing here yet'}>
+          {query.q ? (
+            <>
+              <p className="muted" style={{ maxWidth: '42ch', margin: '0 auto 14px' }}>Try a design word or just your iPhone number.</p>
+              <div className="search-suggestions">
+                {SEARCH_EXAMPLES.map((example) => (
+                  <button type="button" key={example} className="opt-chip" onClick={() => search(example)}>{example}</button>
+                ))}
+              </div>
+              <button type="button" className="btn sm" onClick={clearSearch}>Clear search</button>
+            </>
+          ) : (
+            <>
+              <p className="muted" style={{ maxWidth: '38ch', margin: '0 auto 14px' }}>This section is being stocked. Check back soon.</p>
+              <Link to="/shop" className="btn sm">Browse everything</Link>
+            </>
+          )}
         </EmptyState>
-      ) : <><StaggerGroup className="grid"><AnimatePresence mode="popLayout">{data.data.map((product) => <ProductCard key={product.id} product={product} />)}</AnimatePresence></StaggerGroup><Pagination page={data.pagination.page} pages={data.pagination.pages} onChange={(page) => patch({ page })} /></>}
+      ) : <><StaggerGroup className="grid"><AnimatePresence mode="popLayout">{data.data.map((product) => <ProductCard key={product.id} product={product} to={modelLink(product, query.q)} />)}</AnimatePresence></StaggerGroup><Pagination page={data.pagination.page} pages={data.pagination.pages} onChange={(page) => patch({ page })} /></>}
     </div>
   );
 }

@@ -19,6 +19,11 @@ coverage/
 .cache/
 .tmp/
 temp/
+
+# Locally installed agent skills (npx skills add), not project source
+.agents/
+.claude/
+skills-lock.json
 playwright-report/
 test-results/
 blob-report/

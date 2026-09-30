@@ -50,11 +50,13 @@ test('single-model PDPs expose their automatically selected compatibility chips'
   await expect(flameModel).toBeVisible();
   await expect(flameModel).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('SKU CV-FLAME-SILVER-IPHONE-11-PRO')).toBeVisible();
-  await openPdp(page, 'glossy-white');
-  const glossyModel = page.getByRole('group', { name: 'Phone Model' }).getByRole('button', { name: 'iPhone 14' });
-  await expect(glossyModel).toBeVisible();
-  await expect(glossyModel).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByText('SKU CV-GLOSSY-WHITE-IPHONE-14')).toBeVisible();
+  // Glossy white gained a second model (iPhone 13 Pro) in the 2026-09-30 stock
+  // reconciliation and is no longer single-model; cherry-bow still is.
+  await openPdp(page, 'cherry-bow');
+  const cherryModel = page.getByRole('group', { name: 'Phone Model' }).getByRole('button', { name: 'iPhone 15' });
+  await expect(cherryModel).toBeVisible();
+  await expect(cherryModel).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('SKU CV-CHERRY-BOW-IPHONE-15')).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(failures).toEqual([]);
 });

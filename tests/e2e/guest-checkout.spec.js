@@ -27,7 +27,7 @@ test.describe('guest checkout', () => {
       await page.goto('/cart');
       await expect(page.getByRole('heading', { name: 'Cart', exact: true })).toBeVisible();
       await expect(page.locator('.cart-line')).toHaveCount(1);
-      await expect(page.locator('.cart-line')).toContainText('SKU CV-PINK-LOVE-BOW-');
+      await expect(page.locator('.cart-line')).toContainText('iPhone 14 Pro Max');
       await page.locator('.cart-summary').getByRole('button', { name: 'Checkout' }).click();
 
       await expect(page).toHaveURL(/\/checkout$/);

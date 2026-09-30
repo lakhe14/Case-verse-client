@@ -136,8 +136,34 @@ export async function mockDestinations(page, { fail = false, delayMs = 0 } = {})
   });
 }
 
-/** Seeds the guest cart in localStorage with a real catalog variant. */
+const SYNTHETIC_VARIANT_FLOOR = 990000;
+
+/** What POST /guest-checkout/cart returns for synthetic lines (the real API would drop unknown variants). */
+export function syntheticGuestCart(lines) {
+  const items = lines.map((line) => ({
+    ...syntheticLine,
+    id: `guest-${line.variant_id}`,
+    variant_id: line.variant_id,
+    quantity: line.quantity,
+    line_total: 699 * line.quantity,
+    model: 'iPhone 15',
+    attributes: [{ name: 'Phone Model', value: 'iPhone 15' }],
+  }));
+  const subtotal = items.reduce((sum, item) => sum + item.line_total, 0);
+  return { ...syntheticCart, items, subtotal, estimated_total: subtotal, covers_qty: items.length, item_count: items.reduce((n, i) => n + i.quantity, 0), bundle_pairs: 0, coupon_allowed: true, missing_variant_ids: [] };
+}
+
+/**
+ * Seeds the guest cart in localStorage. Synthetic variants do not exist on the
+ * server, so their server pricing call is answered with synthetic data too.
+ */
 export async function seedGuestCart(page, lines) {
+  if (lines.every((line) => line.variant_id >= SYNTHETIC_VARIANT_FLOOR)) {
+    await page.route('**/api/guest-checkout/cart', (route) => {
+      const sent = route.request().postDataJSON()?.items || lines;
+      return json(route, { data: syntheticGuestCart(sent) });
+    });
+  }
   await page.addInitScript((value) => {
     if (sessionStorage.getItem('cv_e2e_cart_seeded')) return;
     localStorage.setItem('caseverse_guest_cart', JSON.stringify(value));

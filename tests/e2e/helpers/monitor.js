@@ -49,6 +49,9 @@ export function essentialFailures(page, { allow = [] } = {}) {
     const url = request.url();
     if (!LOCAL_ORIGINS.some((origin) => url.startsWith(origin))) return;
     if (isAllowed(allow, url, { network: true })) return;
+    // Destination search cancels its own superseded request as the shopper types
+    // (DestinationCombobox's AbortController); that abort is intended.
+    if (request.failure()?.errorText === 'net::ERR_ABORTED' && /\/api\/geo\/localities\/search$/.test(url)) return;
     failures.push(`network: ${request.failure()?.errorText || 'request failed'}: ${url}`);
   });
   return failures;

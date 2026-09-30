@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import { orders as api } from '../../api/endpoints';
 import { Spinner, ErrorText, EmptyState, Money, StatusBadge } from '../../components/ui';
+import { badgeLabel } from '../../utils/orderStatus';
 
 export default function Orders() {
   const { data, loading, error } = useAsync(() => api.listMine({ limit: 20 }), []);
@@ -37,7 +38,7 @@ export default function Orders() {
                   <td>{new Date(o.placed_at).toLocaleDateString()}</td>
                   <td>{o.items?.reduce((n, i) => n + i.quantity, 0) ?? 0}</td>
                   <td><Money value={o.total_amount} /></td>
-                  <td><StatusBadge status={o.status} /></td>
+                  <td><StatusBadge status={o.status} label={badgeLabel(o)} /></td>
                   <td><Link to={`/account/orders/${o.id}`}>View</Link></td>
                 </tr>
               ))}

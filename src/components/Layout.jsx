@@ -1,20 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useToast } from '../context/ToastContext';
-import { Money, QuantityStepper } from './ui';
-import SalePrice from './SalePrice';
 import SaleBanner from './SaleBanner';
 import { whatsapp, contact } from '../config';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { PageTransition } from '../motion/MotionPrimitives';
 import { motionTokens } from '../motion/motionConfig';
 import { useNavScroll } from '../hooks/useNavScroll';
-import { mediaUrl } from '../utils/mediaUrl';
-
-const BLANK_IMG =
-  'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+import CartDrawer from './CartDrawer';
 
 // Friendly path for a category slug (falls back to /shop?category=).
 export function categoryPath(slug) {
@@ -64,7 +58,7 @@ function CartPill({ count }) {
   return <span className={`cart-pill ${bumped ? 'is-bumped' : ''}`}>{count}</span>;
 }
 
-function Navbar({ onCartOpen, cartButtonRef, scrolled, recede }) {
+function Navbar({ onCartOpen, scrolled, recede }) {
   const { isCustomer, user, logout } = useAuth();
   const { itemCount } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -126,7 +120,7 @@ function Navbar({ onCartOpen, cartButtonRef, scrolled, recede }) {
 
         <div className="nav-right">
           <NavLink to="/wishlist" className="navlink">Wishlist</NavLink>
-          <button ref={cartButtonRef} type="button" className="navlink" onClick={onCartOpen} aria-haspopup="dialog">
+          <button type="button" className="navlink" onClick={onCartOpen} aria-haspopup="dialog">
             Cart<CartPill count={itemCount} />
           </button>
           {isCustomer ? (
@@ -207,131 +201,6 @@ function Navbar({ onCartOpen, cartButtonRef, scrolled, recede }) {
   );
 }
 
-function MiniCartDrawer({ open, onClose, returnFocusRef }) {
-  const { cart, updateItem, removeItem } = useCart();
-  const toast = useToast();
-  const panelRef = useRef(null);
-  const closeRef = useRef(null);
-  const items = cart.items || [];
-
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (panel) panel.inert = !open;
-    if (!open) return;
-
-    document.body.classList.add('minicart-open');
-    const focusTimer = setTimeout(() => closeRef.current?.focus(), 60);
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-
-    return () => {
-      clearTimeout(focusTimer);
-      document.removeEventListener('keydown', onKey);
-      document.body.classList.remove('minicart-open');
-      returnFocusRef?.current?.focus?.();
-    };
-  }, [open, onClose, returnFocusRef]);
-
-  const onQty = async (id, q) => {
-    try {
-      await updateItem(id, q);
-    } catch (e) {
-      toast.error(e.message || 'Could not update that item.');
-    }
-  };
-  const onRemove = async (id) => {
-    try {
-      await removeItem(id);
-      toast.success('Item removed from your cart.');
-    } catch (e) {
-      toast.error(e.message || 'Could not remove that item.');
-    }
-  };
-
-  let body;
-  if (items.length === 0) {
-    body = (
-      <div className="minicart-body">
-        <div className="minicart-empty">
-          <p>Your cart is empty</p>
-          <p className="muted">Nothing here yet. Take a look around.</p>
-        </div>
-      </div>
-    );
-  } else {
-    body = (
-      <>
-        <div className="minicart-body">
-          {items.map((item) => (
-            <div className="minicart-line" key={item.id}>
-              <img className="minicart-thumb" src={mediaUrl(item.product?.image) || BLANK_IMG} alt="" loading="lazy" />
-              <div className="minicart-line-main">
-                <Link to={`/p/${item.product?.slug}`} className="minicart-line-name" onClick={onClose}>
-                  {item.product?.name}
-                </Link>
-                <div className="minicart-line-meta">SKU {item.sku}</div>
-                {!item.stock_ok && (
-                  <div className="stock-out small">Only {item.available_stock} available</div>
-                )}
-                <div className="minicart-line-foot">
-                  <QuantityStepper
-                    value={item.quantity}
-                    min={1}
-                    max={item.available_stock || 99}
-                    onChange={(q) => onQty(item.id, q)}
-                  />
-                  <span className="minicart-line-price"><SalePrice price={item.unit_price} compareAt={item.compare_at_price} compact /><small>× {item.quantity}</small></span>
-                </div>
-                <button
-                  type="button"
-                  className="btn ghost sm"
-                  style={{ paddingLeft: 0, marginTop: 2 }}
-                  onClick={() => onRemove(item.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="minicart-foot">
-          <div className="minicart-subtotal"><span>Subtotal</span><Money value={cart.subtotal} /></div>
-          <p className="muted">Shipping and any discounts are calculated at checkout.</p>
-          <div className="minicart-actions">
-            <Link to="/checkout" className="btn block" onClick={onClose}>Checkout</Link>
-            <Link to="/cart" className="btn subtle block" onClick={onClose}>View full cart</Link>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <AnimatePresence>
-      {open && <>
-      <motion.div className="minicart-scrim is-open" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: motionTokens.duration.fast }} />
-      <motion.aside
-        ref={panelRef}
-        className="minicart-panel is-open"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Your cart"
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={motionTokens.spring.soft}>
-        <div className="minicart-head">
-          <h2>Your cart</h2>
-          <button ref={closeRef} type="button" className="minicart-close" onClick={onClose} aria-label="Close cart">
-            ×
-          </button>
-        </div>
-        {body}
-      </motion.aside>
-      </>}
-    </AnimatePresence>
-  );
-}
-
 function Footer() {
   return (
     <footer className="site-footer">
@@ -352,7 +221,7 @@ function Footer() {
 
           <nav className="footer-col" aria-label="Customer care">
             <h4>Customer care</h4>
-            <Link to="/faq">FAQ</Link><Link to="/shipping">Shipping & delivery</Link><Link to="/returns">Returns & refunds</Link><Link to="/contact">Contact</Link>
+            <Link to="/track-order">Track your order</Link><Link to="/faq">FAQ</Link><Link to="/shipping">Shipping & delivery</Link><Link to="/returns">Returns & refunds</Link><Link to="/contact">Contact</Link>
           </nav>
           <nav className="footer-col" aria-label="Legal">
             <h4>Legal</h4><Link to="/terms">Terms & conditions</Link><Link to="/privacy">Privacy policy</Link>
@@ -380,19 +249,15 @@ function Footer() {
 }
 
 export default function Layout() {
-  const [cartOpen, setCartOpen] = useState(false);
-  const cartButtonRef = useRef(null);
+  const { openDrawer, closeDrawer } = useCart();
   const navStackRef = useRef(null);
   const location = useLocation();
   const { scrolled, recede } = useNavScroll();
 
-  const openCart = useCallback(() => setCartOpen(true), []);
-  const closeCart = useCallback(() => setCartOpen(false), []);
-
   // Close the drawer on navigation (a link inside it was followed).
   useEffect(() => {
-    setCartOpen(false);
-  }, [location.pathname]);
+    closeDrawer();
+  }, [location.pathname, closeDrawer]);
 
   // Non-home pages need real top padding now that the nav floats out of
   // flow; measure the banner+navbar stack instead of guessing a constant.
@@ -410,7 +275,7 @@ export default function Layout() {
     <div className="storefront">
       <div className="nav-stack" ref={navStackRef}>
         <SaleBanner recede={recede} />
-        <Navbar onCartOpen={openCart} cartButtonRef={cartButtonRef} scrolled={scrolled} recede={recede} />
+        <Navbar onCartOpen={openDrawer} scrolled={scrolled} recede={recede} />
       </div>
       <main className={location.pathname === '/' ? 'page page--home' : 'content-shell page'}>
         <PageTransition calm={location.pathname === '/checkout'} key={location.pathname}>
@@ -418,7 +283,7 @@ export default function Layout() {
         </PageTransition>
       </main>
       <Footer />
-      <MiniCartDrawer open={cartOpen} onClose={closeCart} returnFocusRef={cartButtonRef} />
+      <CartDrawer />
     </div>
   );
 }

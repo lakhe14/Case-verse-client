@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import useAsync from '../hooks/useAsync';
 import { guestCheckout } from '../api/endpoints';
-import { Spinner, ErrorText, Money, StatusBadge } from '../components/ui';
+import { Spinner, ErrorText } from '../components/ui';
 import PaymentConfirmation from '../components/PaymentConfirmation';
+import { OrderDelivery, OrderHeader, OrderStatusPanel, OrderSummary } from '../components/OrderParts';
 import usePageMeta from '../hooks/usePageMeta';
+import { trackOrderLink } from '../utils/orderStatus';
 
 export default function GuestOrder() {
   const { token } = useParams();
@@ -20,7 +22,11 @@ export default function GuestOrder() {
       <div className="col" style={{ maxWidth: '60ch' }}>
         <h1>We couldn't find that order</h1>
         <p className="muted">This link may be mistyped, or the order may no longer be available.</p>
-        <Link to="/" className="btn sm">Back to CaseVerse</Link>
+        <p className="muted">You can still look it up with your order ID and phone number.</p>
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <Link to="/track-order" className="btn sm">Track an order</Link>
+          <Link to="/" className="btn subtle sm">Back to CaseVerse</Link>
+        </div>
       </div>
     );
   }
@@ -37,81 +43,23 @@ export default function GuestOrder() {
 
   return (
     <div className="col">
-      <div className="order-detail-actions"><Link to="/" className="muted small">Continue shopping</Link>{canCancel && <button className="btn danger sm" onClick={() => setCancelOpen(true)}>Cancel order</button>}</div>
-      <div className="spread">
-        <h2 style={{ margin: 0 }}>{o.order_number}</h2>
-        <StatusBadge status={o.status} />
+      <div className="order-detail-actions">
+        <Link to="/" className="muted small">Continue shopping</Link>
+        <Link to={trackOrderLink(o.order_number)} className="muted small" data-testid="track-order-link">Track with order ID + phone</Link>
+        {canCancel && <button className="btn danger sm" onClick={() => setCancelOpen(true)}>Cancel order</button>}
       </div>
-      <div className="muted small">Placed {new Date(o.placed_at).toLocaleString()}</div>
+      <OrderHeader order={o} />
       <p className="muted small">
-        Bookmark this page — it's the only way to check your order. It was also shown once when you placed the order.
+        Bookmark this page to pay or cancel. To only check progress later, use Track order with your order ID <strong>{o.order_number}</strong> and phone number.
       </p>
 
       {o.paymentConfirmation && <PaymentConfirmation order={o} guestToken={token} onUpdated={reload} />}
 
-      {o.status === 'cancelled' && <div className="alert ok" data-testid="order-cancelled">{o.cancellation_reason === 'payment_timeout' ? 'This order was cancelled because payment was not confirmed in time.' : 'This order was cancelled.'} <Link to="/covers">Shop other covers</Link>.</div>}
-
-      <div className="row order-detail-grid" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div className="card order-detail-items" style={{ flex: '1 1 340px' }}>
-          <h4>Items</h4>
-          {o.items.map((it) => (
-            <div key={it.id} style={{ borderTop: '1px solid var(--brass-line-soft)', paddingTop: 8, marginTop: 8 }}>
-              <div className="spread">
-                <span>{it.product_name_snap} × {it.quantity}</span>
-                <Money value={it.line_total} />
-              </div>
-              <div className="muted small">{it.sku_snap}</div>
-            </div>
-          ))}
-          {(o.promoItems || []).map((p) => (
-            <div key={p.id} style={{ borderTop: '1px solid var(--brass-line-soft)', paddingTop: 8, marginTop: 8 }}>
-              <div className="spread">
-                <span>{p.name_snap} × {p.quantity}</span>
-                <span style={{ color: 'var(--sage)' }}>FREE</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="card order-detail-totals" style={{ flex: '0 0 260px' }}>
-          <h4>Totals</h4>
-          {o.campaign_name_snap && <p className="eyebrow" style={{ marginTop: 0 }}>{o.campaign_name_snap}</p>}
-          <div className="spread"><span className="muted">Subtotal</span><Money value={o.subtotal_amount} /></div>
-          {Number(o.bundle_discount_amount) > 0 && (
-            <div className="spread">
-              <span className="muted" style={{ whiteSpace: 'nowrap' }}>Bundle discount</span>
-              <span style={{ whiteSpace: 'nowrap' }}>−<Money value={o.bundle_discount_amount} /></span>
-            </div>
-          )}
-          <div className="spread"><span className="muted">Shipping</span><Money value={o.shipping_amount} /></div>
-          {o.courier_destination_name && <div className="spread small"><span className="muted">ParcelMoover destination</span><span>{o.courier_destination_name}</span></div>}
-          <div className="spread money-serif" style={{ fontSize: '1.1rem', borderTop: '1px solid var(--brass-line)', paddingTop: 10, marginTop: 4 }}>
-            <span>Total</span><Money value={o.total_amount} />
-          </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <h4>Tracking</h4>
-        <ul className="timeline">
-          {(o.statusHistory || []).map((h) => (
-            <li key={h.id}>
-              <strong style={{ fontWeight: 500, textTransform: 'capitalize' }}>{h.status}</strong>
-              <div className="muted small">{new Date(h.changed_at).toLocaleString()}</div>
-              {h.note && <div className="muted small">{h.note}</div>}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="card">
-        <h4>Delivery address</h4>
-        <div className="muted small">
-          {o.guest_name}, {o.guest_phone}<br />
-          {o.guest_area}, {o.guest_municipality}, {o.guest_district}, {o.guest_province}
-          {o.guest_landmark ? <><br />Landmark: {o.guest_landmark}</> : null}
-        </div>
-      </div>
+      <OrderStatusPanel order={o}>
+        {o.status === 'cancelled' && <p className="small"><Link to="/covers">Shop other covers</Link></p>}
+      </OrderStatusPanel>
+      <OrderSummary order={o} />
+      <OrderDelivery order={o} />
 
       {cancelOpen && (
         <div className="customer-cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-order-title">

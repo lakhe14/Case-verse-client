@@ -1,5 +1,5 @@
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import useAsync from '../hooks/useAsync';
 import { catalog, reviews as reviewsApi } from '../api/endpoints';
 import { useCart } from '../context/CartContext';
@@ -12,6 +12,9 @@ import { AnimatePresence, motion } from 'motion/react';
 import { MotionButton, StaggerGroup } from '../motion/MotionPrimitives';
 import SalePrice from '../components/SalePrice';
 import { mediaUrl } from '../utils/mediaUrl';
+import { stockState } from '../utils/stock';
+import { useCampaign } from '../hooks/useCampaign';
+import { whatsapp } from '../config';
 
 /** Trim a product description into a ~155-char meta description. */
 function metaFromProduct(product) {
@@ -24,64 +27,44 @@ function metaFromProduct(product) {
   return priced.length > 158 ? `${priced.slice(0, 155).trimEnd()}…` : priced;
 }
 
-function VariantPicker({ variants, value, onChange }) {
-  const attrNames = useMemo(() => {
-    const names = [];
-    variants.forEach((v) => v.attributes.forEach((a) => !names.includes(a.name) && names.push(a.name)));
-    return names;
-  }, [variants]);
+/** Chip label for a variant: its attribute values ("iPhone 15 Pro"). */
+const modelOf = (variant) => variant.attributes.map((a) => a.value).filter(Boolean).join(' / ') || variant.sku;
 
-  const [selection, setSelection] = useState(() => {
-    const init = {};
-    (value?.attributes || variants[0]?.attributes || []).forEach((a) => {
-      init[a.name] = a.value;
-    });
-    return init;
-  });
-
-  // Keep the visible selection aligned with the PDP's auto-selected variant,
-  // including the first in-stock option for a newly loaded product.
-  useEffect(() => {
-    const next = {};
-    (value?.attributes || variants[0]?.attributes || []).forEach((a) => {
-      next[a.name] = a.value;
-    });
-    setSelection(next);
-  }, [value?.id, variants]);
-
-  const pick = (name, val) => {
-    const next = { ...selection, [name]: val };
-    setSelection(next);
-    const match = variants.find((v) => v.attributes.every((a) => next[a.name] === a.value));
-    if (match) onChange(match);
-  };
-
+/**
+ * One chip per model. A sold-out model stays visible (so shoppers know it
+ * exists) but cannot be chosen. With several models nothing is pre-chosen:
+ * the shopper picks their iPhone before anything can go in the cart.
+ */
+function ModelPicker({ variants, value, onChange, invalid, groupRef }) {
+  const label = variants[0]?.attributes?.[0]?.name || 'Phone Model';
   return (
-    <div className="stack">
-      {attrNames.map((name, index) => {
-        const options = [
-          ...new Set(variants.flatMap((v) => v.attributes.filter((a) => a.name === name).map((a) => a.value))),
-        ];
-        const labelId = `variant-attribute-${index}`;
-        return (
-          <div key={name} className="opt-group" aria-labelledby={labelId}>
-            <div id={labelId} className="opt-label">{name}</div>
-            <div className="row" role="group" aria-labelledby={labelId} style={{ flexWrap: 'wrap', gap: 8 }}>
-              {options.map((opt) => (
-                <button
-                  type="button"
-                  key={opt}
-                  className={`opt-chip ${selection[name] === opt ? 'active' : ''}`}
-                  aria-pressed={selection[name] === opt}
-                  onClick={() => pick(name, opt)}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+    <div className="opt-group">
+      <div id="model-picker-label" className="opt-label">
+        {label}
+        {value ? <span className="opt-chosen">: {modelOf(value)}</span> : null}
+      </div>
+      <div
+        ref={groupRef}
+        className={`row model-chips${invalid ? ' is-invalid' : ''}`}
+        role="group"
+        aria-labelledby="model-picker-label"
+        aria-describedby={invalid ? 'model-required' : undefined}
+      >
+        {variants.map((v) => (
+          <button
+            type="button"
+            key={v.id}
+            className={`opt-chip ${value?.id === v.id ? 'active' : ''}`}
+            aria-pressed={value?.id === v.id}
+            disabled={!v.in_stock}
+            onClick={() => onChange(v)}
+          >
+            {modelOf(v)}
+            {!v.in_stock && <span className="opt-chip-note"> Sold out</span>}
+          </button>
+        ))}
+      </div>
+      {invalid && <p id="model-required" className="field-error" role="alert">Choose your iPhone model first.</p>}
     </div>
   );
 }
@@ -274,11 +257,32 @@ function ReviewsPanel({ productId }) {
   );
 }
 
+function PdpHelp() {
+  return (
+    <div className="pdp-help">
+      <p><strong>Delivery across Nepal</strong> by ParcelMoover. The delivery charge for your area is shown at checkout.</p>
+      <p>
+        <Link to="/shipping">Shipping & delivery</Link>
+        <span aria-hidden="true"> · </span>
+        <Link to="/returns">Returns</Link>
+        {whatsapp.link && (
+          <>
+            <span aria-hidden="true"> · </span>
+            <a href={whatsapp.link} target="_blank" rel="noopener">Ask us on WhatsApp</a>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 export default function ProductDetail() {
   const { slug } = useParams();
+  const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { addItem } = useCart();
+  const { addItem, ensureItem, openDrawer } = useCart();
   const toast = useToast();
+  const campaign = useCampaign();
   const { data, loading, error } = useAsync(() => catalog.product(slug), [slug]);
 
   const product = data?.data;
@@ -289,64 +293,107 @@ export default function ProductDetail() {
   const [variant, setVariant] = useState(null);
   const [qty, setQty] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState(null);
-  const [added, setAdded] = useState(false);
+  const [busy, setBusy] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [needsModel, setNeedsModel] = useState(false);
+  const [showSticky, setShowSticky] = useState(false);
+  const pickerRef = useRef(null);
+  const actionsRef = useRef(null);
 
+  const variants = product?.variants || [];
+  const requestedModel = params.get('model');
+
+  // The only model is chosen automatically. With several, only a model named
+  // in the link (from search or the cart) and actually in stock is chosen.
   useEffect(() => {
-    setVariant(null);
     setQty(1);
     setImgIdx(0);
-  }, [slug]);
+    setNeedsModel(false);
+    setActionError(null);
+    const live = product?.variants || [];
+    if (live.length === 1) setVariant(live[0]);
+    else setVariant(live.find((v) => v.in_stock && requestedModel && modelOf(v) === requestedModel) || null);
+  }, [product, requestedModel]);
 
-  const active = variant || product?.variants?.find((v) => v.in_stock) || product?.variants?.[0];
+  // Phones: a slim purchase bar once the main buttons have scrolled above the
+  // viewport. A scroll check, not IntersectionObserver: a fast fling can jump
+  // past the buttons without them ever intersecting, so no callback would fire.
+  useEffect(() => {
+    if (loading || !product) return undefined;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const el = actionsRef.current;
+      setShowSticky(Boolean(el) && el.getBoundingClientRect().bottom < 0);
+    };
+    const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(check); };
+    check();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [product, loading]);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorText error={error} />;
   if (!product) return null;
 
-  const gallery = active?.images?.length ? active.images : product.images;
+  const gallery = variant?.images?.length ? variant.images : product.images;
   const hero = gallery?.[imgIdx] || gallery?.[0];
+  const soldOut = !product.in_stock;
+  const available = variant?.stock_quantity ?? 0;
+  const stock = variant ? stockState(available) : null;
+  const isCover = product.category?.slug === 'iphone-covers';
 
-  const onAdd = async () => {
-    if (!active) return;
-    setAdding(true);
-    setAddError(null);
+  const requireModel = () => {
+    if (variant?.in_stock) return true;
+    setNeedsModel(true);
+    pickerRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    pickerRef.current?.querySelector('button:not([disabled])')?.focus({ preventScroll: true });
+    return false;
+  };
+
+  const onAdd = async (event) => {
+    if (busy || !requireModel()) return;
+    // The main button, even when the sticky bar was used: that bar hides once focus returns.
+    const trigger = event?.currentTarget?.closest('.pdp-sticky-bar') ? actionsRef.current?.querySelector('button') : event?.currentTarget;
+    setBusy('add');
+    setActionError(null);
     try {
-      await addItem(active.id, qty, {
-        product: { id: product.id, name: product.name, slug: product.slug, image: gallery?.[0]?.url || null },
-        sku: active.sku,
-        unit_price: active.price,
-        compare_at_price: active.compare_at_price,
-        stock_quantity: active.stock_quantity,
-      });
-      setAdded(true);
-      toast.success(`Added ${product.name} to your cart.`, {
-        action: { label: 'View cart', onClick: () => navigate('/cart') },
-      });
-      setTimeout(() => setAdded(false), 2000);
+      await addItem(variant.id, qty);
+      openDrawer(trigger);
     } catch (e) {
-      setAddError(e);
+      setActionError(e);
       toast.error(e.message || 'Could not add this to your cart.');
     } finally {
-      setAdding(false);
+      setBusy(null);
     }
   };
 
-  const stockNote = () => {
-    if (!active) return null;
-    if (!active.in_stock) return <span className="stock-out">Out of stock</span>;
-    if (active.stock_quantity <= 5) return <span className="stock-low">Only {active.stock_quantity} left</span>;
-    return <span className="stock-in">In stock</span>;
+  // Buy now = make sure this model is in the cart, then the normal checkout.
+  const onBuyNow = async () => {
+    if (busy || !requireModel()) return;
+    setBusy('buy');
+    setActionError(null);
+    try {
+      await ensureItem(variant.id, qty);
+      navigate('/checkout', { state: { buyNow: { variantId: variant.id } } });
+    } catch (e) {
+      setActionError(e);
+      toast.error(e.message || 'Could not start checkout.');
+      setBusy(null);
+    }
   };
 
   const backTo = product.category ? categoryPath(product.category.slug) : '/shop';
-  const hasPhoneModel = product.variants?.some((v) =>
-    v.attributes?.some((attribute) => attribute.name === 'Phone Model' && attribute.value)
-  );
+  const price = variant?.price ?? product.price_from;
+  const compareAt = variant ? variant.compare_at_price : product.compare_at_price_from;
 
   return (
-    <div>
+    <div className={`pdp-page${showSticky ? ' has-sticky' : ''}`}>
       <Link to={backTo} className="muted small">
         Back to {product.category?.name || 'shop'}
       </Link>
@@ -389,40 +436,72 @@ export default function ProductDetail() {
             <div className="pdp-cat">{product.category?.name}</div>
             <h1 style={{ margin: '6px 0 14px' }}>{product.name}</h1>
             <div className="pdp-price">
-              <SalePrice price={active?.price ?? product.base_price} compareAt={active?.compare_at_price} />
+              <SalePrice price={price} compareAt={compareAt} />
             </div>
+            {isCover && campaign?.active && campaign.bundle_price != null && (
+              <p className="pdp-offer" data-testid="pdp-dashain-offer">
+                <strong>Dashain Trio:</strong> any {campaign.required_case_quantity} cases for NPR {campaign.bundle_price.toLocaleString()} + a FREE suction holder, applied in your cart.
+              </p>
+            )}
           </div>
 
-          <p style={{ maxWidth: '46ch', color: 'var(--ink-soft)' }}>{product.description}</p>
-
-          {hasPhoneModel ? (
-            <VariantPicker variants={product.variants} value={active} onChange={(v) => { setVariant(v); setImgIdx(0); }} />
+          {variants.length ? (
+            <ModelPicker
+              variants={variants}
+              value={variant}
+              invalid={needsModel && !variant}
+              groupRef={pickerRef}
+              onChange={(v) => { setVariant(v); setNeedsModel(false); setQty(1); setImgIdx(0); }}
+            />
           ) : (
             <p className="alert" role="status">Phone model compatibility is unavailable for this cover.</p>
           )}
 
-          <div className="row" style={{ alignItems: 'center', gap: 14 }}>
-            <QuantityStepper value={qty} max={Math.max(1, active?.stock_quantity || 1)} onChange={setQty} />
-            {stockNote()}
-          </div>
-
-          <ErrorText error={addError} />
-          <div className="pdp-cart-actions">
-            <MotionButton className="btn block" disabled={adding || !active?.in_stock} onClick={onAdd}>
-              {added ? 'Added to cart' : adding ? 'Adding' : 'Add to cart'}
-            </MotionButton>
-            {added && (
-              <Link to="/cart" className="btn subtle block pdp-view-cart">
-                View cart
-              </Link>
+          <div className="pdp-stock" aria-live="polite" data-testid="pdp-stock">
+            {soldOut ? (
+              <span className="stock-out">Sold out in every model</span>
+            ) : stock ? (
+              <span className={`stock-${stock.kind}`}>{stock.label}</span>
+            ) : (
+              <span className="muted small">Choose your model to see availability.</span>
             )}
           </div>
-          {active?.sku && <div className="muted small">SKU {active.sku}</div>}
+
+          {variant?.in_stock && available > 1 && (
+            <QuantityStepper value={qty} max={available} onChange={setQty} label={product.name} />
+          )}
+
+          <ErrorText error={actionError} />
+          <div className="pdp-cart-actions" ref={actionsRef}>
+            <MotionButton className="btn" disabled={soldOut || Boolean(busy)} onClick={onAdd}>
+              {soldOut ? 'Sold out' : busy === 'add' ? 'Adding' : 'Add to cart'}
+            </MotionButton>
+            <MotionButton className="btn subtle pdp-buy-now" disabled={soldOut || Boolean(busy)} onClick={onBuyNow}>
+              {busy === 'buy' ? 'Starting checkout' : 'Buy now'}
+            </MotionButton>
+          </div>
+
+          <PdpHelp />
+
+          {product.description && <p className="pdp-description">{product.description}</p>}
+          {variant?.sku && <div className="muted small">SKU {variant.sku}</div>}
         </div>
       </StaggerGroup>
 
       <ReviewsPanel productId={product.id} />
       <WriteReview productId={product.id} slug={slug} />
+
+      {!soldOut && (
+        <div className={`pdp-sticky-bar${showSticky ? ' is-visible' : ''}`} aria-hidden={!showSticky}>
+          <div className="pdp-sticky-info">
+            <strong><Money value={price} /></strong>
+            <span className="muted small">{variant ? modelOf(variant) : 'Choose your model'}</span>
+          </div>
+          <button type="button" className="btn" tabIndex={showSticky ? 0 : -1} disabled={Boolean(busy)} onClick={onAdd}>
+            {variant ? 'Add to cart' : 'Choose model'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
