@@ -175,6 +175,7 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
   const initial = () => ({
     sku: variant.sku,
     price: variant.price,
+    compare_at_price: variant.compare_at_price ?? '',
     stock_quantity: variant.stock_quantity,
     is_active: variant.is_active,
     attrs: Object.fromEntries(
@@ -191,6 +192,7 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
   const dirty =
     row.sku !== variant.sku ||
     Number(row.price) !== Number(variant.price) ||
+    (row.compare_at_price === '' ? null : Number(row.compare_at_price)) !== (variant.compare_at_price ?? null) ||
     Number(row.stock_quantity) !== variant.stock_quantity ||
     row.is_active !== variant.is_active ||
     attrDefs.some(
@@ -205,6 +207,7 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
       await admin.updateVariant(product.id, variant.id, {
         sku: row.sku,
         price: Number(row.price),
+        compare_at_price: row.compare_at_price === '' ? null : Number(row.compare_at_price),
         stock_quantity: Number(row.stock_quantity),
         is_active: row.is_active,
         attributes: attrDefs
@@ -269,6 +272,11 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
           <input type="number" step="0.01" min="0" required value={row.price}
             onChange={(e) => setRow({ ...row, price: e.target.value })} />
         </label>
+        <label className="field" style={{ flex: '0 1 100px', marginBottom: 0 }}>
+          <span className="small muted">Compare at</span>
+          <input type="number" step="0.01" min="0" placeholder="none" value={row.compare_at_price}
+            onChange={(e) => setRow({ ...row, compare_at_price: e.target.value })} />
+        </label>
         <label className="field" style={{ flex: '0 1 90px', marginBottom: 0 }}>
           <span className="small muted">Physical stock</span>
           {/* The server enforces the same floor; this only saves a round trip. */}
@@ -303,7 +311,7 @@ function VariantRow({ product, variant, attrDefs, onChange }) {
 }
 
 function AddVariant({ product, attrDefs, onChange }) {
-  const blank = { sku: '', price: '', stock_quantity: 0, attrs: {} };
+  const blank = { sku: '', price: '', compare_at_price: '', stock_quantity: 0, attrs: {} };
   const [row, setRow] = useState(blank);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -316,6 +324,7 @@ function AddVariant({ product, attrDefs, onChange }) {
       await admin.createVariant(product.id, {
         sku: row.sku,
         price: Number(row.price),
+        compare_at_price: row.compare_at_price === '' ? undefined : Number(row.compare_at_price),
         stock_quantity: Number(row.stock_quantity),
         attributes: attrDefs
           .map((d) => ({ attribute_id: d.id, value: (row.attrs[d.id] || '').trim() }))
@@ -339,6 +348,8 @@ function AddVariant({ product, attrDefs, onChange }) {
           onChange={(e) => setRow({ ...row, sku: e.target.value })} style={{ flex: '1 1 150px' }} />
         <input placeholder="Price" type="number" step="0.01" min="0" required value={row.price}
           onChange={(e) => setRow({ ...row, price: e.target.value })} style={{ flex: '0 1 100px' }} />
+        <input placeholder="Compare at" type="number" step="0.01" min="0" value={row.compare_at_price}
+          onChange={(e) => setRow({ ...row, compare_at_price: e.target.value })} style={{ flex: '0 1 100px' }} />
         <input placeholder="Stock" type="number" min="0" required value={row.stock_quantity}
           onChange={(e) => setRow({ ...row, stock_quantity: e.target.value })} style={{ flex: '0 1 90px' }} />
         {attrDefs.map((d) => (
