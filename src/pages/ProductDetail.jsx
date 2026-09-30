@@ -164,7 +164,7 @@ function WriteReview({ productId, slug }) {
     </h3>
   );
   const wrap = (child) => (
-    <div style={{ maxWidth: '68ch' }}>
+    <div id="write-review" style={{ maxWidth: '68ch' }}>
       {heading}
       {child}
     </div>
@@ -222,6 +222,13 @@ function WriteReview({ productId, slug }) {
   );
 }
 
+function focusWriteReview() {
+  const el = document.getElementById('write-review');
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.querySelector('button, a, input, textarea')?.focus({ preventScroll: true });
+}
+
 function ReviewsPanel({ productId }) {
   const { data, loading } = useAsync(() => reviewsApi.forProduct(productId, { limit: 5 }), [productId]);
   if (loading) return <Spinner />;
@@ -236,7 +243,9 @@ function ReviewsPanel({ productId }) {
             {summary.count === 1 ? '' : 's'}
           </span>
         ) : (
-          <span className="see-all">No reviews yet</span>
+          <button type="button" className="btn sm subtle" onClick={focusWriteReview}>
+            Be the first to review
+          </button>
         )}
       </div>
       {(data?.data || []).length > 0 && (

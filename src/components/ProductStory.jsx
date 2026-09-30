@@ -37,7 +37,10 @@ export default function ProductStory() {
     const trigger = ScrollTrigger.create({
       trigger: root.current,
       start: 'top top',
-      end: '+=1280',
+      // Scale the scrub runway to the viewport instead of a fixed px value:
+      // a short viewport otherwise finishes the 4-step crossfade early and
+      // leaves a long dead-scroll stretch before the section releases.
+      end: () => `+=${Math.round(window.innerHeight * 1.4)}`,
       scrub: 0.35,
       pin: true,
       anticipatePin: 1,
@@ -45,8 +48,14 @@ export default function ProductStory() {
       onUpdate: (self) => setActive(Math.min(3, Math.floor(self.progress * 4))),
     });
     const refreshFrame = window.requestAnimationFrame(() => ScrollTrigger.refresh());
+    // The section's visuals are lazy-loaded (Suspense) and its images decode
+    // after this first refresh; catch any resulting height change so the pin
+    // distance still matches real layout.
+    const onLoad = () => ScrollTrigger.refresh();
+    window.addEventListener('load', onLoad);
     return () => {
       window.cancelAnimationFrame(refreshFrame);
+      window.removeEventListener('load', onLoad);
       trigger.kill();
     };
   }, { scope: root, dependencies: [reduce, mobile] });

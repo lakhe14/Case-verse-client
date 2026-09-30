@@ -29,7 +29,7 @@ function ContactPill({ className = 'contact-pill' }) {
   return (
     <a className={className} href={whatsapp.link} target="_blank" rel="noopener">
       <ChatBubbleIcon />
-      Contact us
+      WhatsApp
     </a>
   );
 }
@@ -38,6 +38,7 @@ const PRIMARY_LINKS = [
   ['/covers', 'Phone covers'],
   ['/shop', 'All'],
   ['/reviews', 'Reviews'],
+  ['/contact', 'Contact'],
 ];
 
 function CartPill({ count }) {
@@ -190,7 +191,7 @@ function Navbar({ onCartOpen, scrolled, recede }) {
                 rel="noopener"
                 onClick={close}
               >
-                Contact us
+                WhatsApp
               </a>
             )}
           </div>

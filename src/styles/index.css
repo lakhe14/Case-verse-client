@@ -702,12 +702,59 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 /* ========================================================================
    CaseVerse storefront art direction — intentionally scoped away from admin.
    ======================================================================== */
-.storefront { --paper: #07090d; --paper-dark: #0c1016; --surface: #121722; --ink: #f5f7fa; --ink-soft: #a3aab6; --oxblood: #91aaff; --oxblood-deep: #b4c4ff; --brass: #8ee7f3; --brass-line: rgba(163, 170, 182, .22); --brass-line-soft: rgba(163, 170, 182, .12); --brand-ink: #07090d; --sage: #8ee7c5; background: var(--paper); min-height: 100vh; }
+.storefront {
+  --paper: #07090d; --paper-dark: #0c1016; --surface: #121722; --ink: #f5f7fa; --ink-soft: #a3aab6; --oxblood: #91aaff; --oxblood-deep: #b4c4ff; --brass: #8ee7f3; --brass-line: rgba(163, 170, 182, .22); --brass-line-soft: rgba(163, 170, 182, .12); --brand-ink: #07090d; --sage: #8ee7c5;
+  /* Radius system: controls/inputs get the small end, cards/tiles the middle, large panels the top. */
+  --radius-sm: 10px; --radius-md: 16px; --radius-lg: 22px; --radius-pill: 999px;
+  background: var(--paper);
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+}
+.storefront > main { flex: 1 0 auto; min-width: 0; }
+
+/* Radius system applied to storefront surfaces only (admin keeps its own scale). */
+.storefront .btn, .storefront input, .storefront select, .storefront textarea, .storefront .opt-chip {
+  border-radius: var(--radius-sm);
+}
+.storefront .card, .storefront .table-wrap, .storefront .alert,
+.storefront .summary-box, .storefront .dashain-cart-card, .storefront .pdp-offer,
+.product-card, .review-card {
+  border-radius: var(--radius-md);
+}
+.product-card .pc-media { border-radius: var(--radius-md) var(--radius-md) 0 0; }
 .storefront .page { max-width: none; padding: 0; }
 .storefront .site-footer { background: #050609; border-color: rgba(255,255,255,.1); }
 .eyebrow { color: #8ee7f3 !important; font-size: .69rem !important; font-weight: 700; letter-spacing: .18em !important; margin: 0 0 16px !important; }
-.storefront .listing-hero { background:#121722; padding:48px; margin-bottom:28px; border:1px solid rgba(255,255,255,.1); }
-.storefront .shop-page { max-width:1280px; margin:0 auto; padding:72px max(24px,5vw) 120px; }.catalog-skeleton{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.catalog-skeleton .skel{height:340px;background:linear-gradient(110deg,#121722,#202b3e,#121722);background-size:200% 100%;}.catalog-error{padding:24px 0}.catalog-error .alert{margin-bottom:12px}
+.storefront .listing-hero { margin-bottom: 22px; }
+.storefront .shop-page { max-width:1320px; margin:0 auto; padding:40px max(24px,5vw) 120px; }.catalog-skeleton{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.catalog-skeleton .skel{height:340px;background:linear-gradient(110deg,#121722,#202b3e,#121722);background-size:200% 100%;}.catalog-error{padding:24px 0}.catalog-error .alert{margin-bottom:12px}
+
+/* /covers layout: a compact left filter sidebar, products as the focus. */
+.shop-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: start; gap: 36px; }
+.shop-filters { position: sticky; top: calc(var(--nav-clearance, 108px) + 20px); display: flex; flex-direction: column; gap: 16px; padding: 18px; background: #121722; border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius-md); }
+.shop-filters .listing-search, .shop-filters .listing-sort { width: 100%; max-width: none; }
+.shop-filters-toggle { display: none; }
+.shop-filters-drawer { display: none; }
+.shop-results { min-width: 0; }
+@media (min-width: 901px) {
+  /* The sidebar narrows the results column, so its cards need a smaller
+     minimum than the full-width grid to keep the same column count. */
+  .shop-results .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .shop-layout { grid-template-columns: 1fr; gap: 0; }
+  .shop-filters { display: none; }
+  .shop-filters-toggle {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-bottom: 16px;
+    padding: 0 16px; border: 1px solid rgba(255,255,255,.16); border-radius: var(--radius-sm);
+    background: #121722; color: var(--ink); font-weight: 600; font-size: .9rem; cursor: pointer;
+  }
+  .shop-filters-drawer {
+    display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; padding: 18px;
+    background: #121722; border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius-md);
+  }
+  .shop-filters-drawer .listing-search, .shop-filters-drawer .listing-sort { width: 100%; max-width: none; }
+}
 
 /* Account surfaces retain storefront contrast without inheriting legacy paper tokens. */
 .storefront .auth-card{width:min(100% - 36px,460px);margin:clamp(56px,9vw,110px) auto;padding:clamp(28px,5vw,44px);background:linear-gradient(145deg,rgba(24,31,45,.98),rgba(12,16,23,.98));border:1px solid rgba(255,255,255,.13);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.34),0 0 38px rgba(92,121,255,.08)}.storefront .auth-card h1{font-family:var(--font-body);font-size:clamp(2.25rem,5vw,3rem);letter-spacing:-.06em;color:#f5f7fa;margin:0 0 10px}.auth-kicker{font-size:.68rem!important;font-weight:700;letter-spacing:.16em;color:#8ee7f3;margin:0 0 18px}.auth-intro{color:#a7afbd;font-size:.91rem;line-height:1.55;margin:0 0 30px}.storefront .auth-card .field{gap:8px;margin-bottom:19px}.storefront .auth-card .field-label{font-size:.83rem;font-weight:600;color:#d7dce5}.storefront .auth-card input{height:46px;background:#111722;color:#f5f7fa;border-color:rgba(255,255,255,.14);border-radius:8px;font-size:.94rem;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}.storefront .auth-card input::placeholder{color:#8f98a8}.storefront .auth-card input:hover{border-color:rgba(255,255,255,.24)}.storefront .auth-card input:focus{border-color:#8ee7f3;background:#141c29;box-shadow:0 0 0 3px rgba(142,231,243,.10)}.storefront .auth-card .muted,.storefront .auth-card .small{color:#a7afbd}.storefront .auth-card a{color:#8ee7f3;font-weight:600}.storefront .auth-card .btn{min-height:46px;border-radius:8px;font-size:.92rem;font-weight:650;background:#dbe7ff;border-color:#dbe7ff;color:#08101d}.storefront .auth-card .btn:disabled{opacity:.48}.password-field{position:relative;display:block}.password-field input{padding-right:58px}.password-field button{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#8ee7f3;font:inherit;font-size:.75rem;font-weight:700;cursor:pointer;padding:8px}.password-field button:focus-visible{outline:2px solid #8ee7f3;outline-offset:2px;border-radius:4px}.storefront .auth-card .alert.error{background:rgba(255,113,113,.1);color:#ffb6b6;border-color:rgba(255,113,113,.35)}
@@ -855,22 +902,17 @@ table.data tbody tr.is-selected { background: var(--oxblood-soft); }
 .cart-coupon-note { margin: 0 0 12px; }
 .cart-continue { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; }
 
-.listing-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 28px; }
-.listing-search { position: relative; display: flex; gap: 8px; flex: 1 1 280px; max-width: 460px; }
+.listing-search { position: relative; display: flex; gap: 8px; width: 100%; }
 .listing-search input { flex: 1; min-width: 0; min-height: 44px; padding-right: 40px; }
 .listing-search input::-webkit-search-cancel-button { display: none; }
 .listing-search-clear { position: absolute; right: 92px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: 0; background: none; color: var(--ink-soft); font-size: 1.3rem; line-height: 1; cursor: pointer; }
 .listing-search-clear:hover { color: var(--ink); }
 .listing-search-go { min-height: 44px; width: 84px; padding-left: 0; padding-right: 0; }
-.listing-sort { width: 170px; max-width: 100%; min-height: 44px; }
-.listing-count { margin: 14px 0 0; min-height: 1.2em; }
+.listing-sort { width: 100%; min-height: 44px; }
+.listing-count { margin: 0; min-height: 1.2em; }
 .search-suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 auto 16px; max-width: 420px; }
 
 @media (max-width: 700px) {
-  .storefront .listing-hero { padding: 28px 18px; }
-  .listing-search { max-width: none; flex-basis: 100%; }
-  .listing-sort { width: 100%; }
-
   /* PDP purchase bar: only after the main buttons scroll away. */
   .pdp-sticky-bar {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;

@@ -95,6 +95,7 @@
   transition: opacity var(--motion-base) var(--ease-premium), background-position var(--motion-slow) var(--ease-premium);
 }
 .nav .brand:hover::after { opacity: 1; background-position: -30% 0; }
+.nav .brand:hover, .nav .brand:focus { text-decoration: none; }
 
 .nav-primary { display: flex; align-items: center; gap: 22px; }
 .nav a.navlink {
