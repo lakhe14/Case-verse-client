@@ -60,8 +60,10 @@ for (const viewport of VIEWPORTS) {
   test.describe(`shopping (${viewport.name})`, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
-    test('multi-model PDP requires a model; Add to cart opens an accessible drawer', async ({ page }) => {
+    test('multi-model PDP requires a model; Add to cart opens an accessible drawer', async ({ page, request }) => {
       const failures = essentialFailures(page);
+      const { data: pinkBow } = await (await request.get(`${API}/products/pink-love-bow`)).json();
+      const iphone16Stock = pinkBow.variants.find((v) => v.attributes[0].value === 'iPhone 16').stock_quantity;
       await openPdp(page, 'pink-love-bow');
       // Nothing is pre-chosen on a multi-model product.
       await expect(picker(page).locator('[aria-pressed="true"]')).toHaveCount(0);
@@ -76,7 +78,7 @@ for (const viewport of VIEWPORTS) {
 
       await chip(page, 'iPhone 16').click();
       await expect(chip(page, 'iPhone 16')).toHaveAttribute('aria-pressed', 'true');
-      await expect(page.getByTestId('pdp-stock')).toHaveText('In stock');
+      await expect(page.getByTestId('pdp-stock')).toHaveText(iphone16Stock > 3 ? `${iphone16Stock} in stock` : `Only ${iphone16Stock} left`);
       const addButton = page.getByRole('button', { name: 'Add to cart' });
       await addButton.click();
 
@@ -225,7 +227,7 @@ for (const viewport of VIEWPORTS) {
       const available = data.variants[0].stock_quantity;
       await openPdp(page, 'flame-silver');
       await expect(chip(page, 'iPhone 11 Pro')).toHaveAttribute('aria-pressed', 'true');
-      await expect(page.getByTestId('pdp-stock')).toHaveText(available > 3 ? 'In stock' : `Only ${available} left`);
+      await expect(page.getByTestId('pdp-stock')).toHaveText(available > 3 ? `${available} in stock` : `Only ${available} left`);
       await expect(page.getByText('SKU CV-FLAME-SILVER-IPHONE-11-PRO')).toBeVisible();
 
       await openPdp(page, 'pink-love-bow');

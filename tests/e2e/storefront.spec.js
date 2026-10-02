@@ -38,7 +38,7 @@ test('multi-model PDP keeps selection, SKU, stock, and cart control valid', asyn
   await modelGroup.getByRole('button', { name: 'iPhone 14 Pro Max' }).click();
   await expect(modelGroup.getByRole('button', { name: 'iPhone 14 Pro Max' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText(/^SKU CV-PINK-LOVE-BOW-/)).toBeVisible();
-  await expect(page.getByText(/In stock|Only \d+ left/)).toBeVisible();
+  await expect(page.getByText(/\d+ in stock|Only \d+ left/)).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(failures).toEqual([]);
 });
@@ -85,4 +85,34 @@ test('PDP retains a loading state during a delayed catalog response', async ({ p
   await page.goto('/p/flame-silver');
   await expect(page.locator('.spinner')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add to cart' })).toBeVisible();
+});
+
+test('a campaign window more than ~25 days out never causes a request storm (useCampaign setTimeout overflow)', async ({ page }) => {
+  // setTimeout silently fires almost immediately past the 32-bit signed int
+  // max delay (~24.8 days). A campaign ending further out than that used to
+  // make useCampaign() refetch in a tight infinite loop (see src/hooks/useCampaign.js).
+  let hits = 0;
+  await page.route('**/api/campaign/dashain', (route) => {
+    hits += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          code: 'DASHAIN_2026',
+          name: 'Dashain Trio Offer',
+          active: true,
+          starts_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          ends_at: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000).toISOString(),
+          required_case_quantity: 2,
+          bundle_price: 1199,
+          free_holder_quantity: 1,
+          free_holder_name: 'FREE Suction Phone Holder',
+        },
+      }),
+    });
+  });
+  await openPdp(page, 'flame-silver');
+  await page.waitForTimeout(1500);
+  expect(hits).toBeLessThanOrEqual(2);
 });
