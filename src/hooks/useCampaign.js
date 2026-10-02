@@ -8,6 +8,13 @@ import { campaign as campaignApi } from '../api/endpoints';
 let cached = null;
 let inflight = null;
 
+// setTimeout silently fires almost immediately once its delay exceeds the
+// 32-bit signed int max (~24.8 days) instead of waiting: a campaign window
+// further out than that would make the boundary timer below refetch in a
+// tight infinite loop. Cap it and just re-check again before the real
+// boundary; refresh() recomputes `next` every time, so this still converges.
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
 function load(force = false) {
   if (cached && !force) return Promise.resolve(cached);
   if (!inflight) {
@@ -37,7 +44,7 @@ export function useCampaign() {
       const start = new Date(c?.starts_at).getTime();
       const end = new Date(c?.ends_at).getTime();
       const next = [start, end].find((time) => Number.isFinite(time) && time > Date.now());
-      if (next) boundaryTimer = window.setTimeout(() => refresh(true), Math.max(next - Date.now() + 25, 25));
+      if (next) boundaryTimer = window.setTimeout(() => refresh(true), Math.min(Math.max(next - Date.now() + 25, 25), MAX_TIMEOUT_MS));
     });
     refresh();
     return () => {
