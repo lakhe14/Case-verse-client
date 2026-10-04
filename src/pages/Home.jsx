@@ -141,7 +141,7 @@ function HeroPanel({ products }) {
       <Link to="/covers" className="hero-link" aria-label="Shop phone covers">
         <div className="hero-aurora" aria-hidden="true" />
         <div className="hero-fog hero-fog--one" aria-hidden="true" /><div className="hero-fog hero-fog--two" aria-hidden="true" />
-        <motion.div className="hero-product-depth" initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}><img className="hero-product" src="/assets/caseverse/case-rotation.png" alt="CaseVerse iPhone cover" loading="eager" fetchpriority="high" decoding="async" /></motion.div>
+        <motion.div className="hero-product-depth" initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}><img className="hero-product" src="/assets/caseverse/case-rotation.webp" alt="CaseVerse iPhone cover" loading="eager" fetchpriority="high" decoding="async" /></motion.div>
         <motion.div className="hp-inner" initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.09, delayChildren: 0.08 } } }}>
           <motion.p variants={reveal} className="hero-eyebrow">CASEVERSE / IPHONE COVERS</motion.p>
           <motion.h2 variants={reveal}>Designed to protect.<br />Built to be noticed.</motion.h2>

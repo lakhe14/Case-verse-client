@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import crypto from 'node:crypto';
 import { essentialFailures } from './helpers/monitor.js';
 
 async function expectNoHorizontalOverflow(page) {
@@ -25,6 +26,32 @@ test('homepage shows curated featured products without essential browser failure
   await firstCard.hover();
   await expect(firstCard).toBeVisible();
   await expectNoHorizontalOverflow(page);
+  expect(failures).toEqual([]);
+});
+
+test('homepage uses and plays the dedicated animated WebP hero at launch viewports', async ({ page }) => {
+  const failures = essentialFailures(page);
+  const frameSignature = async (hero) => crypto.createHash('sha256')
+    .update(await hero.screenshot({ animations: 'allow' }))
+    .digest('hex');
+
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    const hero = page.locator('.hero-product');
+    await expect(hero).toBeVisible();
+    await expect(hero).toHaveAttribute('src', '/assets/caseverse/case-rotation.webp');
+    await expect.poll(() => hero.evaluate((img) => ({ width: img.naturalWidth, height: img.naturalHeight })))
+      .toEqual({ width: 800, height: 600 });
+    await expectNoHorizontalOverflow(page);
+
+    const signatures = new Set();
+    for (let sample = 0; sample < 4; sample += 1) {
+      signatures.add(await frameSignature(hero));
+      await page.waitForTimeout(180);
+    }
+    expect(signatures.size, `animated WebP advances at ${viewport.width}x${viewport.height}`).toBeGreaterThan(1);
+  }
   expect(failures).toEqual([]);
 });
 
