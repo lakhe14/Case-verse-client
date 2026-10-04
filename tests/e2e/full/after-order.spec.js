@@ -107,7 +107,7 @@ for (const viewport of [{ name: 'mobile', width: 390, height: 844 }, { name: 'de
       await expect(status(page)).toHaveAttribute('data-kind', 'payment_pending');
       await expect(status(page)).toContainText('Waiting for your payment');
       expect(await timelineLabels(page)).toEqual(['Order received', 'Payment pending', 'Processing', 'Shipped', 'Delivered']);
-      await expect(result.getByTestId('order-due')).toContainText(npr(order.total_amount));
+      await expect(result.getByTestId('order-due')).toContainText(npr(Number(order.total_amount) - 100));
       await expect(result).toContainText('iPhone 12');
       // Summary only: the area, not the street or phone.
       await expect(result).toContainText(address.city);
@@ -166,7 +166,9 @@ test('every payment and order state reads correctly on the tracker', async ({ pa
   const proofed = await customerOrder(request);
   phone = proofed.phone;
   expect((await customerProof(request, proofed)).status()).toBe(201);
-  await check(proofed.order, 'proof_uploaded', ['Order received', 'Proof uploaded', 'Processing', 'Shipped', 'Delivered']);
+  await check(proofed.order, 'proof_uploaded', ['Order received', 'Proof uploaded', 'Processing', 'Shipped', 'Delivered'], async () => {
+    await expect(page.getByTestId('order-due')).toContainText(npr(Number(proofed.order.total_amount) - 100));
+  });
 
   await review(request, proofed.order.id, 'reject', 'Screenshot was cropped');
   await check(proofed.order, 'proof_rejected', null, async () => {
@@ -200,6 +202,7 @@ test('every payment and order state reads correctly on the tracker', async ({ pa
   expect((await request.post(`${API}/orders/${cancelled.order.id}/cancel`, { headers: bearer(cancelled.session) })).status()).toBe(200);
   await check(cancelled.order, 'cancelled', null, async () => {
     await expect(page.getByTestId('order-cancelled')).toContainText('You cancelled this order.');
+    await expect(page.getByTestId('order-due')).toHaveCount(0);
   });
 
   const lapsed = await customerOrder(request);
@@ -217,6 +220,7 @@ test('the guest order link still works and links to tracking with the order ID p
   await page.goto(`/order/guest/${token}`);
   await expect(page.getByTestId('order-number')).toHaveText(order.order_number);
   await expect(page.getByTestId('order-status')).toHaveAttribute('data-kind', 'payment_pending');
+  await expect(page.getByTestId('order-due')).toContainText(npr(Number(order.total_amount) - 100));
   await expect(page.getByRole('button', { name: 'Submit payment proof' })).toBeVisible();
   await expect(page.getByText('E2E after-order lane', { exact: false })).toBeVisible(); // the owner sees the full address
   await page.getByTestId('track-order-link').click();
@@ -244,6 +248,7 @@ test('a signed-in customer order page keeps working and links to tracking', asyn
     await page.goto(`/account/orders/${order.id}`);
     await expect(page.getByTestId('order-number')).toHaveText(order.order_number);
     await expect(page.getByTestId('order-status')).toHaveAttribute('data-kind', 'payment_pending');
+    await expect(page.getByTestId('order-due')).toContainText(npr(Number(order.total_amount) - 100));
     await expect(page.getByText('iPhone 14').first()).toBeVisible();
     await page.getByTestId('track-order-link').click();
     await page.getByLabel('Phone number').fill(address.phone);
@@ -324,6 +329,11 @@ test.describe('staff print views', () => {
     await expect(page.locator('.print-toolbar')).toBeHidden();
     expect(await invoice.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     await page.emulateMedia({ media: 'screen' });
+
+    await page.goto(`/admin/orders/${order.id}`);
+    await expect(page.getByTestId('admin-remaining-cod')).toContainText(npr(Number(snapshot.total_amount) - 100));
+    await page.goto(`/admin/print/orders/${order.id}/label`);
+    await expect(page.getByTestId('label-cod')).toContainText(npr(Number(snapshot.total_amount) - 100));
   });
 
   test('the parcel label shows recipient, destination and the cash to collect, without courier ids', async ({ page, request }) => {

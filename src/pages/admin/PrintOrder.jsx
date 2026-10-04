@@ -155,7 +155,7 @@ export function PrintInvoice() {
                 <dt>Method</dt><dd>{PAYMENT_METHOD_LABELS[payment.method] || payment.method}</dd>
                 <dt>Status</dt><dd>{paymentStatusLabel(payment.status)}</dd>
                 <dt>Advance paid</dt><dd data-testid="invoice-advance">{npr(summary.advance_paid)}</dd>
-                <dt>Remaining (cash on delivery)</dt><dd data-testid="invoice-remaining">{o.status === 'cancelled' ? '—' : npr(summary.remaining_cod)}</dd>
+                <dt>Remaining (cash on delivery)</dt><dd data-testid="invoice-remaining">{o.status === 'cancelled' ? 'Nothing owed' : npr(summary.remaining_cod)}</dd>
               </dl>
             ) : <p className="print-muted">No payment record on this order.</p>}
           </section>
