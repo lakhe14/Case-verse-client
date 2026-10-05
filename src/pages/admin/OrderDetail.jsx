@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import { admin } from '../../api/endpoints';
 import { Spinner, ErrorText, Money, StatusBadge } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import PaymentProofModal from '../../components/PaymentProofModal';
 
 const NEXT = {
-  pending: ['processing', 'shipped', 'cancelled'],
-  processing: ['shipped', 'delivered', 'cancelled'],
+  pending: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
   shipped: ['delivered', 'cancelled'],
   delivered: [],
   cancelled: [],
@@ -30,6 +31,7 @@ export default function AdminOrderDetail() {
   const [actionError, setActionError] = useState(null);
   const [paymentNote, setPaymentNote] = useState('');
   const [proofUrl, setProofUrl] = useState(null);
+  const proofTrigger = useRef(null);
 
   if (loading) return <Spinner />;
   if (error) return <ErrorText error={error} />;
@@ -60,10 +62,14 @@ export default function AdminOrderDetail() {
       setPaymentNote(''); reload();
     } catch (e) { setActionError(e); if (e?.code === 'order_cancelled') reload(); } finally { setBusy(false); }
   };
-  const viewProof = async () => {
+  const viewProof = async (trigger) => {
     setActionError(null);
-    try { const result = await admin.paymentProof(payment.id); setProofUrl(URL.createObjectURL(result.data)); }
+    try { proofTrigger.current = trigger; const result = await admin.paymentProof(payment.id); setProofUrl(URL.createObjectURL(result.data)); }
     catch (e) { setActionError(e); }
+  };
+  const closeProof = () => {
+    if (proofUrl) URL.revokeObjectURL(proofUrl);
+    setProofUrl(null);
   };
 
   return (
@@ -128,7 +134,7 @@ export default function AdminOrderDetail() {
         )}
       </div>
 
-      {payment && <div className="card admin-payment-panel"><div className="spread"><h3>Payment confirmation</h3><span className="row" style={{ gap: 6 }}><StatusBadge status={payment.status} />{payment.review_overdue && <span className="badge overdue" data-testid="review-overdue">Review overdue</span>}</span></div><dl><div><dt>Method</dt><dd>{payment.method === 'whatsapp_cod' ? 'WhatsApp COD' : 'eSewa advance'}</dd></div><div><dt>Required advance</dt><dd><Money value={o.payment_summary?.required_advance} /></dd></div><div><dt>Advance paid</dt><dd><Money value={o.payment_summary?.advance_paid} /></dd></div><div><dt>Collect on delivery</dt><dd data-testid="admin-remaining-cod">{o.status === 'cancelled' ? 'Nothing owed' : <Money value={o.payment_summary?.remaining_cod} />}</dd></div><div><dt>Submitted</dt><dd>{payment.proof_filename ? new Date(payment.updated_at).toLocaleString() : 'Not submitted'}</dd></div>{payment.reviewed_at && <div><dt>Reviewed</dt><dd>{new Date(payment.reviewed_at).toLocaleString()}{payment.reviewedByStaff?.name ? ` by ${payment.reviewedByStaff.name}` : ''}</dd></div>}</dl>{payment.admin_note && <p className="muted small">Note: {payment.admin_note}</p>}{can('manage_order_payments') && <div className="admin-payment-actions">{o.status === 'cancelled' && <p className="muted small">This order is cancelled; its payment can no longer be reviewed.</p>}{payment.proof_filename && <button className="btn subtle sm" onClick={viewProof}>View payment proof</button>}{o.status === 'pending' && payment.status === 'proof_uploaded' && <><textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength="500" rows="3" placeholder="Optional review or rejection note" /><div className="row"><button className="btn sm" disabled={busy} onClick={() => reviewPayment('approve')}>Approve payment</button><button className="btn danger sm" disabled={busy} onClick={() => reviewPayment('reject')}>Reject payment</button></div></>}{o.status === 'pending' && payment.status === 'cod_pending' && <button className="btn sm" disabled={busy} onClick={() => reviewPayment('approve')}>Confirm COD</button>}</div>}</div>}
+      {payment && <div className="card admin-payment-panel"><div className="spread"><h3>Payment confirmation</h3><span className="row" style={{ gap: 6 }}><StatusBadge status={payment.status} />{payment.review_overdue && <span className="badge overdue" data-testid="review-overdue">Review overdue</span>}</span></div><dl><div><dt>Method</dt><dd>{payment.method === 'whatsapp_cod' ? 'WhatsApp COD' : 'eSewa advance'}</dd></div><div><dt>Required advance</dt><dd><Money value={o.payment_summary?.required_advance} /></dd></div><div><dt>Advance paid</dt><dd><Money value={o.payment_summary?.advance_paid} /></dd></div><div><dt>Collect on delivery</dt><dd data-testid="admin-remaining-cod">{o.status === 'cancelled' ? 'Nothing owed' : <Money value={o.payment_summary?.remaining_cod} />}</dd></div><div><dt>Submitted</dt><dd data-testid="proof-submitted-at">{payment.proof_filename ? (payment.proof_submitted_at ? new Date(payment.proof_submitted_at).toLocaleString() : 'Not recorded (legacy proof)') : 'Not submitted'}</dd></div>{payment.reviewed_at && <div><dt>Reviewed</dt><dd data-testid="proof-reviewed-at">{new Date(payment.reviewed_at).toLocaleString()}{payment.reviewedByStaff?.name ? ` by ${payment.reviewedByStaff.name}` : ''}</dd></div>}</dl>{payment.admin_note && <p className="muted small">Note: {payment.admin_note}</p>}{can('manage_order_payments') && <div className="admin-payment-actions">{o.status === 'cancelled' && <p className="muted small">This order is cancelled; its payment can no longer be reviewed.</p>}{payment.proof_filename && <button className="btn subtle sm" onClick={(event) => viewProof(event.currentTarget)}>View payment proof</button>}{o.status === 'pending' && payment.status === 'proof_uploaded' && <><textarea value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} maxLength="500" rows="3" placeholder="Optional review or rejection note" /><div className="row"><button className="btn sm" disabled={busy} onClick={() => reviewPayment('approve')}>Approve payment</button><button className="btn danger sm" disabled={busy} onClick={() => reviewPayment('reject')}>Reject payment</button></div></>}{o.status === 'pending' && payment.status === 'cod_pending' && <button className="btn sm" disabled={busy} onClick={() => reviewPayment('approve')}>Confirm COD</button>}</div>}</div>}
 
       <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div className="card" style={{ flex: '1 1 320px' }}>
@@ -174,7 +180,7 @@ export default function AdminOrderDetail() {
           ))}
         </ul>
       </div>
-      {proofUrl && <div className="admin-proof-modal" role="dialog" aria-modal="true" aria-label="Payment proof preview" onClick={() => { URL.revokeObjectURL(proofUrl); setProofUrl(null); }}><img src={proofUrl} alt="Customer payment proof" /></div>}
+      {proofUrl && <PaymentProofModal src={proofUrl} onClose={closeProof} returnFocus={proofTrigger} />}
     </div>
   );
 }

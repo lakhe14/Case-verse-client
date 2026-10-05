@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import { admin } from '../../api/endpoints';
-import { Spinner, ErrorText, Money, Pagination, StatusBadge } from '../../components/ui';
+import { Spinner, ErrorText, EmptyState, Money, Pagination, StatusBadge } from '../../components/ui';
 
 export default function AdminProducts() {
   const [page, setPage] = useState(1);
@@ -49,7 +49,11 @@ export default function AdminProducts() {
         <Spinner />
       ) : (
         <>
-          <div className="table-wrap">
+          {(data?.data || []).length === 0 ? (
+            <EmptyState title={q ? 'No products found' : 'No products found'}>
+              {q && <span>Try a different search term.</span>}
+            </EmptyState>
+          ) : <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr><th>Name</th><th>Category</th><th>Variants</th><th>Price</th><th>Status</th><th /></tr>
@@ -72,7 +76,7 @@ export default function AdminProducts() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>}
           <Pagination page={data?.pagination?.page || 1} pages={data?.pagination?.pages || 1} onChange={setPage} />
         </>
       )}

@@ -97,7 +97,7 @@ test.describe('admin permissions', () => {
 
 test.describe('admin payment queue (synthetic data)', () => {
   const rows = [
-    { id: 990701, method: 'advance_qr', status: 'proof_uploaded', advance_amount: '100.00', proof_filename: 'qa.png', updated_at: '2026-01-01T00:00:00.000Z', order: { order_number: 'QA-E2E-0101', guest_name: 'QA Guest' } },
+    { id: 990701, method: 'advance_qr', status: 'proof_uploaded', advance_amount: '100.00', proof_filename: 'qa.png', proof_submitted_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-02T00:00:00.000Z', order: { order_number: 'QA-E2E-0101', guest_name: 'QA Guest' } },
     { id: 990702, method: 'whatsapp_cod', status: 'cod_pending', advance_amount: '100.00', proof_filename: null, updated_at: '2026-01-01T00:00:00.000Z', order: { order_number: 'QA-E2E-0102', user: { name: 'QA Customer' } } },
   ];
 
@@ -123,6 +123,9 @@ test.describe('admin payment queue (synthetic data)', () => {
     const codRow = page.getByRole('row', { name: /QA-E2E-0102/ });
     await expect(proofRow).toContainText('proof_uploaded');
     await expect(proofRow).toContainText('eSewa advance');
+    // Jan 1 is the proof submission; Jan 2 is deliberately updated_at and
+    // must never be presented as the submission time.
+    await expect(page.getByTestId('proof-submitted-at-990701')).toHaveText(new Date(rows[0].proof_submitted_at).toLocaleString());
     await expect(codRow).toContainText('cod_pending');
     await expect(codRow.getByRole('button', { name: 'Confirm COD' })).toBeVisible();
     await expect(codRow.getByRole('button', { name: 'Reject' })).toHaveCount(0);
@@ -133,8 +136,12 @@ test.describe('admin payment queue (synthetic data)', () => {
     expect((await proofRequest).headers().authorization).toMatch(/^Bearer /);
     const preview = page.getByRole('dialog', { name: 'Payment proof preview' });
     await expect(preview.locator('img')).toHaveAttribute('src', /^blob:/);
-    await preview.click();
+    await expect(preview.getByRole('button', { name: 'Close payment proof preview' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(preview.getByRole('button', { name: 'Close payment proof preview' })).toBeFocused();
+    await page.keyboard.press('Escape');
     await expect(preview).toHaveCount(0);
+    await expect(proofRow.getByRole('button', { name: 'View proof' })).toBeFocused();
 
     await proofRow.getByRole('button', { name: 'Approve' }).click();
     await expect.poll(() => actions.length).toBe(1);
@@ -149,6 +156,20 @@ test.describe('admin payment queue (synthetic data)', () => {
     expect(actions[1]).toMatchObject({ body: { note: 'QA synthetic rejection note' } });
     expect(actions[1].url).toMatch(/\/990701\/reject$/);
     expect(failures).toEqual([]);
+  });
+
+  test('processing orders offer Shipped but never Delivered', async ({ page }) => {
+    await mockStaffSession(page, ['manage_orders']);
+    await page.route('**/api/admin/orders/42', (route) => json(route, {
+      data: {
+        id: 42, order_number: 'QA-PROCESSING', status: 'processing', placed_at: '2026-01-01T00:00:00.000Z',
+        guest_name: 'QA Guest', guest_phone: '9800000009', guest_area: 'Ward 1', guest_municipality: 'Kathmandu', guest_district: 'Kathmandu', guest_province: 'Bagmati',
+        items: [], promoItems: [], statusHistory: [], subtotal_amount: 100, discount_amount: 0, shipping_amount: 0, total_amount: 100,
+      },
+    }));
+    await page.goto('/admin/orders/42');
+    await expect(page.getByRole('button', { name: 'Mark shipped' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mark delivered' })).toHaveCount(0);
   });
 
   test('admin layout fits a phone and a tablet', async ({ page }) => {
