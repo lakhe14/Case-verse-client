@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import AdminNotifications from '../../components/AdminNotifications';
 
 const NAV = [
   ['/admin', 'Dashboard', 'view_analytics', true],
@@ -22,7 +23,7 @@ function currentPageLabel(pathname) {
   return match ? match[1] : 'Dashboard';
 }
 
-function NavItems({ can, onNavigate }) {
+function NavItems({ can, onNavigate, unreadCount = 0 }) {
   return NAV.filter(([, , perm]) => !perm || can(perm)).map(([to, label, , end]) => (
     <NavLink
       key={to}
@@ -31,7 +32,7 @@ function NavItems({ can, onNavigate }) {
       onClick={onNavigate}
       className={({ isActive }) => (isActive ? 'active' : '')}
     >
-      {label}
+      <span>{label}</span>{label === 'Orders' && unreadCount > 0 && <b className="admin-nav-unread" aria-label={`${unreadCount} unread order notifications`}>{unreadCount > 99 ? '99+' : unreadCount}</b>}
     </NavLink>
   ));
 }
@@ -55,6 +56,8 @@ export default function AdminLayout() {
   const { staff, can, logout } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [compactHeader, setCompactHeader] = useState(() => window.innerWidth <= 900);
   const closeRef = useRef(null);
   const drawerRef = useRef(null);
   const menuBtnRef = useRef(null);
@@ -63,6 +66,12 @@ export default function AdminLayout() {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const update = () => setCompactHeader(window.innerWidth <= 900);
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     const drawer = drawerRef.current;
@@ -93,7 +102,7 @@ export default function AdminLayout() {
         >
           CaseVerse Admin
         </Link>
-        <NavItems can={can} />
+        <NavItems can={can} unreadCount={unreadCount} />
         <StaffFooter staff={staff} logout={logout} />
       </aside>
 
@@ -117,6 +126,7 @@ export default function AdminLayout() {
           <span className="admin-topbar-brand">CaseVerse Admin</span>
           <span className="admin-topbar-page">{currentPageLabel(location.pathname)}</span>
         </div>
+        {compactHeader && can('manage_orders') && <AdminNotifications onUnreadChange={setUnreadCount} />}
       </div>
 
       {/* Mobile slide-out drawer */}
@@ -146,7 +156,7 @@ export default function AdminLayout() {
           </button>
         </div>
         <nav className="admin-drawer-nav">
-          <NavItems can={can} onNavigate={() => setMenuOpen(false)} />
+          <NavItems can={can} unreadCount={unreadCount} onNavigate={() => setMenuOpen(false)} />
         </nav>
         <StaffFooter staff={staff} logout={logout} />
       </aside>
@@ -154,7 +164,7 @@ export default function AdminLayout() {
       <main className="admin-main">
         <header className="admin-desktop-bar">
           <div><span className="admin-crumb">CASEVERSE / OPERATIONS</span></div>
-          <div className="admin-user-chip"><span>{staff?.name?.slice(0, 1) || 'A'}</span><div><b>{staff?.name}</b><small>{staff?.role}</small></div></div>
+          <div className="row">{!compactHeader && can('manage_orders') && <AdminNotifications onUnreadChange={setUnreadCount} />}<div className="admin-user-chip"><span>{staff?.name?.slice(0, 1) || 'A'}</span><div><b>{staff?.name}</b><small>{staff?.role}</small></div></div></div>
         </header>
         <div className="admin-content"><Outlet /></div>
       </main>

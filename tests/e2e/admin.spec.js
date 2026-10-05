@@ -103,7 +103,10 @@ test.describe('admin payment queue (synthetic data)', () => {
 
   async function mountQueue(page) {
     const actions = [];
-    await mockStaffSession(page, ['manage_order_payments']);
+    await mockStaffSession(page, ['manage_order_payments', 'manage_orders']);
+    await page.route('**/api/admin/notifications**', (route) => json(route, { data: [{ id: 991001, type: 'new_order', order_id: 42, title: 'New order', message: 'CV-NEW · NPR 1,278', created_at: '2026-01-01T00:00:00.000Z', read_at: null }], unread_count: 1, pagination: { page: 1, pages: 1, total: 1 } }));
+    await page.route('**/api/admin/notifications/*/read', (route) => json(route, { data: {} }));
+    await page.route('**/api/admin/notifications/read-all', (route) => json(route, {}));
     await page.route('**/api/admin/payment-confirmations', (route) => json(route, { data: rows }));
     await page.route('**/api/admin/payment-confirmations/*/proof', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: pngBody }));
     await page.route(/\/api\/admin\/payment-confirmations\/\d+\/(approve|reject)$/, (route) => {
@@ -126,6 +129,7 @@ test.describe('admin payment queue (synthetic data)', () => {
     // Jan 1 is the proof submission; Jan 2 is deliberately updated_at and
     // must never be presented as the submission time.
     await expect(page.getByTestId('proof-submitted-at-990701')).toHaveText(new Date(rows[0].proof_submitted_at).toLocaleString());
+    await expect(page.getByRole('button', { name: '1 unread order notifications' })).toBeVisible();
     await expect(codRow).toContainText('cod_pending');
     await expect(codRow.getByRole('button', { name: 'Confirm COD' })).toBeVisible();
     await expect(codRow.getByRole('button', { name: 'Reject' })).toHaveCount(0);
